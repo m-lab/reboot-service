@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/evfirerob/reboot-service/drac"
+	"github.com/m-lab/reboot-service/drac"
 )
 
 const defaultDRACPort = 806
