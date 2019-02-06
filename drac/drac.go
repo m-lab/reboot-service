@@ -24,30 +24,30 @@ type Connection struct {
 
 // NewConnection returns a new Connection configured with the specified
 // credentials.
-func NewConnection(host string, port int32, username string, password string, privateKeyPath string) *Connection {
+func NewConnection(host string, port int32, username string, password string, privateKeyPath string) (*Connection, error) {
 
 	var authMethods []ssh.AuthMethod
 	privateBytes, err := ioutil.ReadFile(privateKeyPath)
 
-	var privateKeyAuth ssh.AuthMethod
 	if err != nil {
-		log.Println("Cannot read private key, ignoring.")
+		log.Println("Cannot read private key: ", err)
 	} else {
 
 		privateKey, err := ssh.ParsePrivateKey(privateBytes)
 
 		if err != nil {
-			log.Fatal("Cannot parse private key")
+			// If a private key exists but it's not parseable, the connection
+			// is not created.
+			log.Println("Cannot parse private key: ", err)
+			return nil, err
 		}
 
-		privateKeyAuth = ssh.PublicKeys(privateKey)
+		privateKeyAuth := ssh.PublicKeys(privateKey)
 		authMethods = append(authMethods, privateKeyAuth)
 	}
 
 	passwordAuth := ssh.Password(password)
 	authMethods = append(authMethods, passwordAuth)
-
-	fmt.Printf("username: %s, password: %s\n", username, password)
 
 	// TODO: find out how to enable host key verification for M-Lab hosts.
 	clientConfig := &ssh.ClientConfig{
@@ -62,7 +62,7 @@ func NewConnection(host string, port int32, username string, password string, pr
 		Auth: clientConfig,
 	}
 
-	return conn
+	return conn, nil
 }
 
 // startSession starts an SSH session on Host:Port, using the provided

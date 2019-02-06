@@ -18,7 +18,12 @@ func DracReboot(host string) {
 		return
 	}
 
-	conn := drac.NewConnection(host, defaultDRACPort, username, password, "")
+	conn, err := drac.NewConnection(host, defaultDRACPort, username, password, "")
+
+	if err != nil {
+		log.Println("ERROR: cannot initialize connection: ", err)
+		return
+	}
 	output, err := conn.Reboot()
 
 	if err != nil {
