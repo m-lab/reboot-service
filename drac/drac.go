@@ -22,6 +22,8 @@ type Connection struct {
 	Auth *ssh.ClientConfig
 }
 
+// NewConnection returns a new Connection configured with the specified
+// credentials.
 func NewConnection(host string, port int32, username string, password string, privateKeyPath string) *Connection {
 
 	var authMethods []ssh.AuthMethod
@@ -81,7 +83,7 @@ func (c *Connection) startSession() (*ssh.Session, error) {
 	return session, nil
 }
 
-// exec runs a command on the specified host, after getting a session.
+// Exec gets a session and sends a command on this Connection.
 func (c *Connection) Exec(cmd string) (string, error) {
 	log.Printf("DEBUG: exec %s on %s", cmd, c.Host)
 	session, err := c.startSession()
@@ -97,6 +99,7 @@ func (c *Connection) Exec(cmd string) (string, error) {
 	return string(out), nil
 }
 
+// Reboot sends a reboot command on this Connection.
 func (c *Connection) Reboot() (string, error) {
 	log.Printf("DEBUG: reboot %s", c.Host)
 	return c.Exec("racadm serveraction powercycle")

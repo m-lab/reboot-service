@@ -8,6 +8,8 @@ import (
 
 const defaultDRACPort = 806
 
+// DracReboot retrieves credentials from Datastore, logs into a DRAC and sends
+// a reboot command to the given hostname.
 func DracReboot(host string) {
 	username, password, err := FindCredentials(host)
 
@@ -27,5 +29,4 @@ func DracReboot(host string) {
 }
 
 func main() {
-	DracReboot("mlab4d.lga0t.measurement-lab.org")
 }

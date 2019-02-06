@@ -10,6 +10,9 @@ import (
 const projectID = "mlab-sandbox"
 const datastoreKind = "Credentials"
 
+// Credentials is a struct holding the credentials for a given hostname,
+// plus some additional metadata such as the IP address and the model (DRAC
+// or otherwise).
 type Credentials struct {
 	Hostname string `datastore:"hostname"`
 	Username string `datastore:"username"`
@@ -18,6 +21,8 @@ type Credentials struct {
 	Address  string `datastore:"address"`
 }
 
+// FindCredentials retrieves a username/password pair from Google Cloud
+// Datastore for a given hostname.
 func FindCredentials(host string) (string, string, error) {
 	ctx := context.Background()
 
