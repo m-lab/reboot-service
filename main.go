@@ -7,9 +7,14 @@ import (
 	"strconv"
 
 	"github.com/m-lab/reboot-service/drac"
+	"golang.org/x/crypto/ssh"
 )
 
 const defaultDRACPort = 806
+
+type SSHConnection interface {
+	Dial(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error)
+}
 
 var (
 	fPrivateKeyPath string
