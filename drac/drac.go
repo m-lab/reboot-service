@@ -9,14 +9,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 
 	"golang.org/x/crypto/ssh"
 )
 
-// DRACConnection represents a connection to a DRAC. It includes hostname, port,
+// Connection represents a connection to a DRAC. It includes hostname, port,
 // credentials and it wraps a ssh.ClientConfig containing authentication
 // settings.
-type DRACConnection struct {
+type Connection struct {
 	Host string
 	Port int32
 	Auth *ssh.ClientConfig
@@ -24,29 +25,32 @@ type DRACConnection struct {
 	dialer Dialer
 }
 
-// Interface to allow mocking of ssh.Dial in unit tests
+// Dialer is an interface to allow mocking of ssh.Dial in unit tests.
 type Dialer interface {
 	Dial(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error)
 }
 
+// DialerImpl is a default implementation of Dialer.
 type DialerImpl struct{}
 
 // Dial is just a wrapper around ssh.Dial
-func (d *DialerImpl) Dial(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+func (d *DialerImpl) Dial(network, addr string,
+	config *ssh.ClientConfig) (*ssh.Client, error) {
 	return ssh.Dial(network, addr, config)
 }
 
+// Client is an interface to allow mocking of ssh.Client in unit tests.
 type Client interface {
 	NewSession() (*ssh.Session, error)
 }
 
 // NewConnection returns a new Connection configured with the specified
 // credentials.
-func NewConnection(host string, port int32, username string, password string, privateKeyPath string,
-	dialer Dialer) (*DRACConnection, error) {
+func NewConnection(host string, port int32, username string, password string,
+	privateKeyPath string, dialer Dialer) (*Connection, error) {
 
 	var authMethods []ssh.AuthMethod
-	privateBytes, err := ioutil.ReadFile(privateKeyPath)
+	privateBytes, err := ioutil.ReadFile(filepath.Clean(privateKeyPath))
 
 	if err != nil {
 		log.Println("Cannot read private key: ", err)
@@ -75,7 +79,7 @@ func NewConnection(host string, port int32, username string, password string, pr
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	conn := &DRACConnection{
+	conn := &Connection{
 		Host:   host,
 		Port:   port,
 		Auth:   clientConfig,
@@ -87,8 +91,9 @@ func NewConnection(host string, port int32, username string, password string, pr
 
 // connect starts an SSH session on Host:Port, using the provided
 // credentials.
-func (c *DRACConnection) connect() (*ssh.Client, error) {
-	client, err := c.dialer.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), c.Auth)
+func (c *Connection) connect() (*ssh.Client, error) {
+	client, err := c.dialer.Dial("tcp",
+		fmt.Sprintf("%s:%d", c.Host, c.Port), c.Auth)
 
 	if err != nil {
 		return nil, err
@@ -97,18 +102,8 @@ func (c *DRACConnection) connect() (*ssh.Client, error) {
 	return client, err
 }
 
-func (c *DRACConnection) getSession(client Client) (*ssh.Session, error) {
-	session, err := client.NewSession()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return session, nil
-}
-
 // Exec gets a session and sends a command on this Connection.
-func (c *DRACConnection) Exec(cmd string) (string, error) {
+func (c *Connection) Exec(cmd string) (string, error) {
 	log.Printf("DEBUG: exec %s on %s", cmd, c.Host)
 	client, err := c.connect()
 
@@ -116,21 +111,40 @@ func (c *DRACConnection) Exec(cmd string) (string, error) {
 		return "", err
 	}
 
-	session, err := c.getSession(client)
+	session, err := getSession(client)
 
 	if err != nil {
-		log.Fatalf("Command execution failed: %s\n", err)
-
+		log.Printf("SSH session creation failed: %s\n", err)
+		return "", err
 	}
-	defer session.Close()
+	defer func() {
+		if session.Close() != nil {
+			log.Printf("Cannot close SSH session: %s\n", err)
+		}
+	}()
 
-	out, _ := session.CombinedOutput(cmd)
+	out, err := session.CombinedOutput(cmd)
+	if err != nil {
+		log.Printf("Command execution failed: %s\n", err)
+		return "", err
+	}
 
 	return string(out), nil
 }
 
 // Reboot sends a reboot command on this Connection.
-func (c *DRACConnection) Reboot() (string, error) {
+func (c *Connection) Reboot() (string, error) {
 	log.Printf("DEBUG: reboot %s", c.Host)
 	return c.Exec("racadm serveraction powercycle")
+}
+
+// getSession gets an SSH session from a client.
+func getSession(client Client) (*ssh.Session, error) {
+	session, err := client.NewSession()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return session, nil
 }

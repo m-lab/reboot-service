@@ -1,12 +1,6 @@
-// Package drac contains the functions to establish an SSH connection with
-// a DRAC, using a username/password pair, and implements some utility
-// functions to:
-// - Reboot the node
-// - Disable/Enable IP block for remote access
 package drac
 
 import (
-	"os"
 	"reflect"
 	"testing"
 
@@ -25,7 +19,9 @@ type MockDialer struct{}
 type MockClient struct{}
 
 // Dial is a fake implementation returning an empty ssh.Client
-func (*MockDialer) Dial(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+func (*MockDialer) Dial(network, addr string,
+	config *ssh.ClientConfig) (*ssh.Client, error) {
+
 	return fakeSSHClient, nil
 }
 
@@ -42,13 +38,6 @@ var (
 )
 
 func TestNewConnection(t *testing.T) {
-	_, err := os.Create(privateKeyPath)
-	if err != nil {
-		t.Errorf("Cannot create the fake private key file: %v", err)
-		return
-	}
-	defer os.Remove(privateKeyPath)
-
 	t.Run("new-connection-with-password-success", func(t *testing.T) {
 		conn, err := NewConnection(host, port, username, password, "", mockDialer)
 		if err != nil {
@@ -83,12 +72,7 @@ func TestDRACConnection_connect(t *testing.T) {
 
 func TestDRACConnection_getSession(t *testing.T) {
 	t.Run("get-session-success", func(t *testing.T) {
-		c, err := NewConnection(host, port, username, password, "", mockDialer)
-		if err != nil {
-			t.Errorf("Error while creating connection: %v", err)
-		}
-
-		got, err := c.getSession(mockClient)
+		got, err := getSession(mockClient)
 		if err != nil {
 			t.Errorf("DRACConnection.getSession() error = %v", err)
 			return
