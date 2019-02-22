@@ -8,11 +8,10 @@ import (
 )
 
 const (
-	host           = "localhost"
-	port           = 22
-	username       = "test"
-	password       = "test"
-	privateKeyPath = "private.key"
+	host     = "localhost"
+	port     = 22
+	username = "test"
+	password = "test"
 )
 
 type MockDialer struct{}
