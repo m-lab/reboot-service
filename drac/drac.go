@@ -22,12 +22,14 @@ type Connection struct {
 	Port int32
 	Auth *ssh.ClientConfig
 
-	dialer Dialer
+	dialer  Dialer
+	client  Client
+	session Session
 }
 
 // Dialer is an interface to allow mocking of ssh.Dial in unit tests.
 type Dialer interface {
-	Dial(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error)
+	Dial(network, addr string, config *ssh.ClientConfig) (Client, error)
 }
 
 // DialerImpl is a default implementation of Dialer.
@@ -41,7 +43,17 @@ func (d *DialerImpl) Dial(network, addr string,
 
 // Client is an interface to allow mocking of ssh.Client in unit tests.
 type Client interface {
-	NewSession() (*ssh.Session, error)
+	NewSession() (Session, error)
+	Close() error
+}
+
+type Session interface {
+	CombinedOutput(cmd string) ([]byte, error)
+	Close() error
+}
+
+type SessionWrapper struct {
+	Session
 }
 
 // NewConnection returns a new Connection configured with the specified
@@ -89,41 +101,68 @@ func NewConnection(host string, port int32, username string, password string,
 	return conn, nil
 }
 
-// connect starts an SSH session on Host:Port, using the provided
-// credentials.
-func (c *Connection) connect() (*ssh.Client, error) {
-	client, err := c.dialer.Dial("tcp",
-		fmt.Sprintf("%s:%d", c.Host, c.Port), c.Auth)
+// Connect initializes the SSH client connecting to Host:Port.
+// This method is idempotent and won't create a Client when
+// one is available already. To create a new Client, call Close()
+// first.
+func (c *Connection) connect() error {
+	if c.client == nil {
+		client, err := c.dialer.Dial("tcp",
+			fmt.Sprintf("%s:%d", c.Host, c.Port), c.Auth)
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return err
+		}
+
+		c.client = client
 	}
 
-	return client, err
+	return nil
 }
 
-// Exec gets a session and sends a command on this Connection.
-func (c *Connection) Exec(cmd string) (string, error) {
-	log.Printf("DEBUG: exec %s on %s", cmd, c.Host)
-	client, err := c.connect()
-
-	if err != nil {
-		return "", err
-	}
-
-	session, err := getSession(client)
-
-	if err != nil {
-		log.Printf("SSH session creation failed: %s\n", err)
-		return "", err
-	}
-	defer func() {
-		if session.Close() != nil {
-			log.Printf("Cannot close SSH session: %s\n", err)
+// CreateSession creates a new session for the current Client. This method is
+// idempotent and won't create a Session when one is available already. To
+// create a new Session, call Close() first, then Connect() again.
+func (c *Connection) createSession() error {
+	if c.session == nil {
+		session, err := c.client.NewSession()
+		if err != nil {
+			log.Printf("Error while initializing SSH session: %s", err)
 		}
-	}()
 
-	out, err := session.CombinedOutput(cmd)
+		c.session = session
+	}
+
+	return nil
+}
+
+// Close closes the underlying Client and Session and sets the corresponding
+// pointers to nil.
+func (c *Connection) close() error {
+	err := c.session.Close()
+	if err != nil {
+		return err
+	}
+
+	c.session = nil
+
+	err = c.client.Close()
+	if err != nil {
+		return err
+	}
+
+	c.client = nil
+	return nil
+
+}
+
+// Exec executes a command on this Connection.
+func (c *Connection) Exec(cmd string) (string, error) {
+	c.connect()
+	c.createSession()
+	defer c.close()
+
+	out, err := c.session.CombinedOutput(cmd)
 	if err != nil {
 		log.Printf("Command execution failed: %s\n", err)
 		return "", err
@@ -136,15 +175,4 @@ func (c *Connection) Exec(cmd string) (string, error) {
 func (c *Connection) Reboot() (string, error) {
 	log.Printf("DEBUG: reboot %s", c.Host)
 	return c.Exec("racadm serveraction powercycle")
-}
-
-// getSession gets an SSH session from a client.
-func getSession(client Client) (*ssh.Session, error) {
-	session, err := client.NewSession()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return session, nil
 }
