@@ -22,44 +22,53 @@ type Connection struct {
 	Port int32
 	Auth *ssh.ClientConfig
 
-	dialer  Dialer
-	client  Client
-	session Session
+	dialer  dialer
+	client  client
+	session session
 }
 
-// Dialer is an interface to allow mocking of ssh.Dial in unit tests.
-type Dialer interface {
-	Dial(network, addr string, config *ssh.ClientConfig) (Client, error)
+// dialer is an interface to allow mocking of ssh.Dial in unit tests.
+type dialer interface {
+	Dial(network, addr string, config *ssh.ClientConfig) (client, error)
 }
 
-// DialerImpl is a default implementation of Dialer.
-type DialerImpl struct{}
-
-// Dial is just a wrapper around ssh.Dial
-func (d *DialerImpl) Dial(network, addr string,
-	config *ssh.ClientConfig) (*ssh.Client, error) {
-	return ssh.Dial(network, addr, config)
-}
-
-// Client is an interface to allow mocking of ssh.Client in unit tests.
-type Client interface {
-	NewSession() (Session, error)
+// client is an interface to allow mocking of ssh.client in unit tests.
+type client interface {
+	NewSession() (session, error)
 	Close() error
 }
 
-type Session interface {
+type session interface {
 	CombinedOutput(cmd string) ([]byte, error)
 	Close() error
 }
 
-type SessionWrapper struct {
-	Session
+type dialerImpl struct{}
+
+type clientImpl struct {
+	*ssh.Client
+}
+
+func (cw clientImpl) NewSession() (session, error) { return cw.NewSession() }
+func (cw clientImpl) Close() error                 { return cw.Close() }
+
+// Dial is just a wrapper around ssh.Dial
+func (d *dialerImpl) Dial(network, addr string,
+	config *ssh.ClientConfig) (client, error) {
+
+	cl, err := ssh.Dial(network, addr, config)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return clientImpl{cl}, nil
 }
 
 // NewConnection returns a new Connection configured with the specified
 // credentials.
 func NewConnection(host string, port int32, username string, password string,
-	privateKeyPath string, dialer Dialer) (*Connection, error) {
+	privateKeyPath string, d dialer) (*Connection, error) {
 
 	var authMethods []ssh.AuthMethod
 	privateBytes, err := ioutil.ReadFile(filepath.Clean(privateKeyPath))
@@ -95,42 +104,42 @@ func NewConnection(host string, port int32, username string, password string,
 		Host:   host,
 		Port:   port,
 		Auth:   clientConfig,
-		dialer: dialer,
+		dialer: d,
 	}
 
 	return conn, nil
 }
 
-// Connect initializes the SSH client connecting to Host:Port.
+// connect initializes the SSH client connecting to Host:Port.
 // This method is idempotent and won't create a Client when
 // one is available already. To create a new Client, call Close()
 // first.
 func (c *Connection) connect() error {
 	if c.client == nil {
-		client, err := c.dialer.Dial("tcp",
+		cl, err := c.dialer.Dial("tcp",
 			fmt.Sprintf("%s:%d", c.Host, c.Port), c.Auth)
 
 		if err != nil {
 			return err
 		}
 
-		c.client = client
+		c.client = cl
 	}
 
 	return nil
 }
 
-// CreateSession creates a new session for the current Client. This method is
+// createSession creates a new session for the current Client. This method is
 // idempotent and won't create a Session when one is available already. To
 // create a new Session, call Close() first, then Connect() again.
 func (c *Connection) createSession() error {
 	if c.session == nil {
-		session, err := c.client.NewSession()
+		sess, err := c.client.NewSession()
 		if err != nil {
-			log.Printf("Error while initializing SSH session: %s", err)
+			return err
 		}
 
-		c.session = session
+		c.session = sess
 	}
 
 	return nil
@@ -158,8 +167,17 @@ func (c *Connection) close() error {
 
 // Exec executes a command on this Connection.
 func (c *Connection) Exec(cmd string) (string, error) {
-	c.connect()
-	c.createSession()
+	err := c.connect()
+	if err != nil {
+		log.Printf("Error while initializing SSH session: %s", err)
+		return "", err
+	}
+
+	err = c.createSession()
+	if err != nil {
+		log.Printf("Error while initializing session: %s", err)
+		return "", err
+	}
 	defer c.close()
 
 	out, err := c.session.CombinedOutput(cmd)
