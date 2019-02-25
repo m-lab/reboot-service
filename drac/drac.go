@@ -46,11 +46,11 @@ type session interface {
 type dialerImpl struct{}
 
 type clientImpl struct {
-	*ssh.Client
+	client *ssh.Client
 }
 
-func (cw clientImpl) NewSession() (session, error) { return cw.NewSession() }
-func (cw clientImpl) Close() error                 { return cw.Close() }
+func (cw clientImpl) NewSession() (session, error) { return cw.client.NewSession() }
+func (cw clientImpl) Close() error                 { return cw.client.Close() }
 
 // Dial is just a wrapper around ssh.Dial
 func (d *dialerImpl) Dial(network, addr string,
