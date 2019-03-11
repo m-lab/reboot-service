@@ -11,6 +11,8 @@ import (
 	"log"
 	"path/filepath"
 
+	"github.com/m-lab/go/warnonerror"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -178,7 +180,7 @@ func (c *Connection) Exec(cmd string) (string, error) {
 		log.Printf("Error while initializing session: %s", err)
 		return "", err
 	}
-	defer c.close()
+	defer warnonerror.Close(c.session, "Warning: ignoring error")
 
 	out, err := c.session.CombinedOutput(cmd)
 	if err != nil {
