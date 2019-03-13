@@ -1,3 +1,5 @@
+// Package storage contains types and functions to retrieve data from Google
+// Cloud Datastore.
 package storage
 
 import (
@@ -21,8 +23,8 @@ type Credentials struct {
 	Address  string `datastore:"address"`
 }
 
-// FindCredentials retrieves a username/password pair from Google Cloud
-// Datastore for a given hostname.
+// FindCredentials retrieves a username/password pair from a DatastoreClient
+// for a given hostname.
 func FindCredentials(ctx context.Context, dc iface.DatastoreClient,
 	host string) (*Credentials, error) {
 

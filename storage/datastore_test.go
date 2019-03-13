@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/datastore"
 )
 
+// DatastoreClientMock is a fake DatastoreClient for testing.
 type DatastoreClientMock struct {
 	Creds      []*Credentials
 	mustFail   bool
