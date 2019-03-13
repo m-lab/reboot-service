@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 
 	"cloud.google.com/go/datastore"
 	"github.com/m-lab/reboot-service/storage/iface"
@@ -36,7 +37,7 @@ func FindCredentials(ctx context.Context, dc iface.DatastoreClient,
 	}
 
 	if len(creds) == 0 {
-		return nil, err
+		return nil, errors.New("Hostname not found in Datastore")
 	}
 
 	cred := creds[0]
