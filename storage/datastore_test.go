@@ -60,7 +60,7 @@ func TestFindCredentials(t *testing.T) {
 		return
 	}
 
-	if creds.Hostname != fakeDrac.Hostname || creds.Username != fakeDrac.Username || creds.Password != fakeDrac.Password {
+	if *creds != *fakeDrac {
 		t.Errorf("FindCredentials() didn't return a valid Credentials.")
 	}
 
