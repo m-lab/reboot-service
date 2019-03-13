@@ -65,7 +65,7 @@ func TestFindCredentials(t *testing.T) {
 	}
 
 	mockClient.mustFail = true
-	creds, err = FindCredentials(ctx, mockClient, testHost)
+	_, err = FindCredentials(ctx, mockClient, testHost)
 
 	if err == nil {
 		t.Errorf("FindCredentials() didn't return an error as expected.")
@@ -74,7 +74,7 @@ func TestFindCredentials(t *testing.T) {
 	mockClient.mustFail = false
 	mockClient.skipAppend = true
 
-	creds, err = FindCredentials(ctx, mockClient, testHost)
+	_, err = FindCredentials(ctx, mockClient, testHost)
 
 	if err == nil {
 		t.Errorf("FindCredentials() didn't return an error as expected.")
