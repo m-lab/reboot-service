@@ -8,14 +8,14 @@ import (
 	"cloud.google.com/go/datastore"
 )
 
-// MockDatastoreClient is a fake DatastoreClient for testing.
-type MockDatastoreClient struct {
+// mockDatastoreClient is a fake DatastoreClient for testing.
+type mockDatastoreClient struct {
 	Creds      []*Credentials
 	mustFail   bool
 	skipAppend bool
 }
 
-func (d MockDatastoreClient) GetAll(ctx context.Context, q *datastore.Query,
+func (d mockDatastoreClient) GetAll(ctx context.Context, q *datastore.Query,
 	dst interface{}) ([]*datastore.Key, error) {
 
 	if d.mustFail {
@@ -48,7 +48,7 @@ var fakeDrac = &Credentials{
 
 func TestFindCredentials(t *testing.T) {
 	ctx := context.Background()
-	var mockClient = MockDatastoreClient{
+	var mockClient = mockDatastoreClient{
 		Creds: []*Credentials{
 			fakeDrac,
 		},
