@@ -23,16 +23,22 @@ type Credentials struct {
 	Address  string `datastore:"address"`
 }
 
+// Datastore is a struct holding the DatastoreClient and the namespace to use.
+type Datastore struct {
+	Client    iface.DatastoreClient
+	Namespace string
+}
+
 // FindCredentials retrieves a username/password pair from a DatastoreClient
 // for a given hostname.
-func FindCredentials(ctx context.Context, dc iface.DatastoreClient,
+func FindCredentials(ctx context.Context, ds Datastore,
 	host string) (*Credentials, error) {
 
-	query := datastore.NewQuery(datastoreKind)
+	query := datastore.NewQuery(datastoreKind).Namespace(ds.Namespace)
 	query = query.Filter("hostname = ", host)
 
 	var creds []*Credentials
-	_, err := dc.GetAll(ctx, query, &creds)
+	_, err := ds.Client.GetAll(ctx, query, &creds)
 
 	if err != nil {
 		return nil, err
