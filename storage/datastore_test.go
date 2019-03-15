@@ -31,11 +31,12 @@ func (d mockDatastoreClient) GetAll(ctx context.Context, q *datastore.Query,
 }
 
 const (
-	testHost    = "test"
-	testUser    = "user"
-	testPass    = "pass"
-	testModel   = "drac"
-	testAddress = "addr"
+	testHost      = "test"
+	testUser      = "user"
+	testPass      = "pass"
+	testModel     = "drac"
+	testAddress   = "addr"
+	testNamespace = "test"
 )
 
 var fakeDrac = &Credentials{
@@ -48,14 +49,19 @@ var fakeDrac = &Credentials{
 
 func TestFindCredentials(t *testing.T) {
 	ctx := context.Background()
-	var mockClient = mockDatastoreClient{
+	var mockClient = &mockDatastoreClient{
 		Creds: []*Credentials{
 			fakeDrac,
 		},
 	}
 
+	var datastore = Datastore{
+		Client:    mockClient,
+		Namespace: testNamespace,
+	}
+
 	// FindCredentials must return valid credentials for a known hostname.
-	creds, err := FindCredentials(ctx, mockClient, testHost)
+	creds, err := FindCredentials(ctx, datastore, testHost)
 	if err != nil {
 		t.Errorf("FindCredentials() error = %v", err)
 		return
@@ -67,7 +73,7 @@ func TestFindCredentials(t *testing.T) {
 	// FindCredentials must fail if there is an error while retrieving
 	// credentials from Datastore.
 	mockClient.mustFail = true
-	_, err = FindCredentials(ctx, mockClient, testHost)
+	_, err = FindCredentials(ctx, datastore, testHost)
 	if err == nil {
 		t.Errorf("FindCredentials() didn't return an error as expected.")
 	}
@@ -76,7 +82,7 @@ func TestFindCredentials(t *testing.T) {
 	// requested hostname.
 	mockClient.mustFail = false
 	mockClient.skipAppend = true
-	_, err = FindCredentials(ctx, mockClient, testHost)
+	_, err = FindCredentials(ctx, datastore, testHost)
 	if err == nil {
 		t.Errorf("FindCredentials() didn't return an error as expected.")
 	}
