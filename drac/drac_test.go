@@ -98,6 +98,6 @@ func TestExec(t *testing.T) {
 }
 
 func testImplDialer(in dialer) {
-	var d dialerImpl
+	var d DialerImpl
 	func(in dialer) {}(&d)
 }
