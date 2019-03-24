@@ -1,3 +1,4 @@
+// Package services includes the business logic for
 package services
 
 import (
@@ -12,6 +13,7 @@ import (
 
 var dsNewClient = datastore.NewClient
 
+// TODO(roberto): these should be specified by the caller.
 const (
 	projectID        = "mlab-sandbox"
 	defaultNamespace = "reboot-api"
