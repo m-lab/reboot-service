@@ -4,24 +4,28 @@ package reboot
 
 import (
 	"context"
-	"log"
 
 	"github.com/m-lab/reboot-service/drac"
 
 	"cloud.google.com/go/datastore"
 	"github.com/m-lab/reboot-service/storage"
+	log "github.com/sirupsen/logrus"
 )
 
 var dsNewClient = datastore.NewClient
 
-// TODO(roberto): these should be specified by the caller.
-const (
-	projectID        = "mlab-sandbox"
-	defaultNamespace = "reboot-api"
-)
+// Config holds the configuration for retrieving credentials and rebooting
+// nodes.
+type Config struct {
+	ProjectID string
+	Namespace string
 
-func retrieveDRACCredentials(ctx context.Context, host string) (*storage.Credentials, error) {
-	client, err := dsNewClient(ctx, projectID)
+	SSHPort  int32
+	DRACPort int32
+}
+
+func retrieveDRACCredentials(ctx context.Context, conf *Config, host string) (*storage.Credentials, error) {
+	client, err := dsNewClient(ctx, conf.ProjectID)
 
 	if err != nil {
 		return nil, err
@@ -29,19 +33,19 @@ func retrieveDRACCredentials(ctx context.Context, host string) (*storage.Credent
 
 	return storage.FindCredentials(ctx, storage.Datastore{
 		Client:    client,
-		Namespace: defaultNamespace,
+		Namespace: conf.Namespace,
 	}, host)
 }
 
 // DRAC reboots a node via its DRAC.
-func DRAC(ctx context.Context, host string, port int32) (string, error) {
-	cred, err := retrieveDRACCredentials(ctx, host)
+func DRAC(ctx context.Context, conf *Config, host string) (string, error) {
+	cred, err := retrieveDRACCredentials(ctx, conf, host)
 	if err != nil {
 		log.Printf("Cannot retrieve DRAC credentials: %v", err)
 		return "", err
 	}
 
-	conn, err := drac.NewConnection(host, port, cred.Username, cred.Password, "", &drac.DialerImpl{})
+	conn, err := drac.NewConnection(host, conf.DRACPort, cred.Username, cred.Password, "", &drac.DialerImpl{})
 	if err != nil {
 		log.Printf("Cannot initialize DRAC connection %v", err)
 		return "", err

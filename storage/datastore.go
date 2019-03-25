@@ -8,6 +8,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/m-lab/reboot-service/storage/iface"
+	log "github.com/sirupsen/logrus"
 )
 
 const datastoreKind = "Credentials"
@@ -33,6 +34,7 @@ type Datastore struct {
 // for a given hostname.
 func FindCredentials(ctx context.Context, ds Datastore,
 	host string) (*Credentials, error) {
+	log.Debugf("Retrieving credentials for %v from namespace %v", host, ds.Namespace)
 
 	query := datastore.NewQuery(datastoreKind).Namespace(ds.Namespace)
 	query = query.Filter("hostname = ", host)
