@@ -33,8 +33,8 @@ func retrieveDRACCredentials(ctx context.Context, host string) (*storage.Credent
 	}, host)
 }
 
-// RebootDRAC reboots a node via its DRAC.
-func RebootDRAC(ctx context.Context, host string, port int32) (string, error) {
+// DRAC reboots a node via its DRAC.
+func DRAC(ctx context.Context, host string, port int32) (string, error) {
 	cred, err := retrieveDRACCredentials(ctx, host)
 	if err != nil {
 		log.Printf("Cannot retrieve DRAC credentials: %v", err)
