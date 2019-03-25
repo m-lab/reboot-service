@@ -1,5 +1,6 @@
-// Package services includes the business logic for
-package services
+// Package reboot provides the business logic to reboot a node via DRAC or
+// SSH access.
+package reboot
 
 import (
 	"context"
