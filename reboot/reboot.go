@@ -6,13 +6,17 @@ import (
 	"context"
 
 	"github.com/m-lab/reboot-service/drac"
+	"github.com/m-lab/reboot-service/storage/iface"
+	"google.golang.org/api/option"
 
 	"cloud.google.com/go/datastore"
 	"github.com/m-lab/reboot-service/storage"
 	log "github.com/sirupsen/logrus"
 )
 
-var dsNewClient = datastore.NewClient
+var dsNewClient = func(ctx context.Context, projectID string, opts ...option.ClientOption) (iface.DatastoreClient, error) {
+	return datastore.NewClient(ctx, projectID, opts...)
+}
 
 // Config holds the configuration for retrieving credentials and rebooting
 // nodes.
@@ -22,6 +26,9 @@ type Config struct {
 
 	SSHPort  int32
 	DRACPort int32
+
+	// The Dialer to use for SSH connections - useful for unit testing.
+	Dialer drac.Dialer
 }
 
 func retrieveDRACCredentials(ctx context.Context, conf *Config, host string) (*storage.Credentials, error) {
@@ -45,7 +52,7 @@ func DRAC(ctx context.Context, conf *Config, host string) (string, error) {
 		return "", err
 	}
 
-	conn, err := drac.NewConnection(host, conf.DRACPort, cred.Username, cred.Password, "", &drac.DialerImpl{})
+	conn, err := drac.NewConnection(host, conf.DRACPort, cred.Username, cred.Password, "", conf.Dialer)
 	if err != nil {
 		log.Printf("Cannot initialize DRAC connection %v", err)
 		return "", err

@@ -24,23 +24,23 @@ type Connection struct {
 	Port int32
 	Auth *ssh.ClientConfig
 
-	dialer  dialer
-	client  client
-	session session
+	dialer  Dialer
+	client  Client
+	session Session
 }
 
-// dialer is an interface to allow mocking of ssh.Dial in unit tests.
-type dialer interface {
-	Dial(network, addr string, config *ssh.ClientConfig) (client, error)
+// Dialer is an interface to allow mocking of ssh.Dial in unit tests.
+type Dialer interface {
+	Dial(network, addr string, config *ssh.ClientConfig) (Client, error)
 }
 
-// client is an interface to allow mocking of ssh.client in unit tests.
-type client interface {
-	NewSession() (session, error)
+// Client is an interface to allow mocking of ssh.Client in unit tests.
+type Client interface {
+	NewSession() (Session, error)
 	Close() error
 }
 
-type session interface {
+type Session interface {
 	CombinedOutput(cmd string) ([]byte, error)
 	Close() error
 }
@@ -51,12 +51,12 @@ type ClientImpl struct {
 	client *ssh.Client
 }
 
-func (cw ClientImpl) NewSession() (session, error) { return cw.client.NewSession() }
+func (cw ClientImpl) NewSession() (Session, error) { return cw.client.NewSession() }
 func (cw ClientImpl) Close() error                 { return cw.client.Close() }
 
 // Dial is just a wrapper around ssh.Dial
 func (d *DialerImpl) Dial(network, addr string,
-	config *ssh.ClientConfig) (client, error) {
+	config *ssh.ClientConfig) (Client, error) {
 
 	cl, err := ssh.Dial(network, addr, config)
 
@@ -70,7 +70,7 @@ func (d *DialerImpl) Dial(network, addr string,
 // NewConnection returns a new Connection configured with the specified
 // credentials.
 func NewConnection(host string, port int32, username string, password string,
-	privateKeyPath string, d dialer) (*Connection, error) {
+	privateKeyPath string, d Dialer) (*Connection, error) {
 
 	var authMethods []ssh.AuthMethod
 	privateBytes, err := ioutil.ReadFile(filepath.Clean(privateKeyPath))

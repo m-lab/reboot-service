@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/m-lab/reboot-service/drac"
+
 	"github.com/m-lab/go/flagx"
 	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/reboot-service/reboot"
@@ -73,6 +75,7 @@ func createRebootConfig() *reboot.Config {
 		ProjectID: projectID,
 		SSHPort:   int32(sshPort),
 		DRACPort:  int32(dracPort),
+		Dialer:    &drac.DialerImpl{},
 	}
 }
 

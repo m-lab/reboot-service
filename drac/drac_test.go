@@ -24,13 +24,13 @@ type mockSessionImpl struct {
 
 // Dial is a fake implementation returning an empty ssh.Client
 func (*mockDialerImpl) Dial(network, addr string,
-	config *ssh.ClientConfig) (client, error) {
+	config *ssh.ClientConfig) (Client, error) {
 
 	return &mockClientImpl{}, nil
 }
 
 // NewSession is a fake implementation returning an empty ssh.Session.
-func (*mockClientImpl) NewSession() (session, error) {
+func (*mockClientImpl) NewSession() (Session, error) {
 	return fakeSession, nil
 }
 
@@ -97,7 +97,7 @@ func TestExec(t *testing.T) {
 	})
 }
 
-func testImplDialer(in dialer) {
+func testImplDialer(in Dialer) {
 	var d DialerImpl
-	func(in dialer) {}(&d)
+	func(in Dialer) {}(&d)
 }
