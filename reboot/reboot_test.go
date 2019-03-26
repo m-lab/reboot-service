@@ -107,15 +107,6 @@ var (
 )
 
 func TestDRAC(t *testing.T) {
-	// Inject a mock DatastoreClient that knows just one host.
-	dsNewClient = func(ctx context.Context, projectID string, opts ...option.ClientOption) (iface.DatastoreClient, error) {
-		return &mockDatastoreClient{
-			Creds: []*storage.Credentials{
-				fakeDrac,
-			},
-		}, nil
-	}
-
 	conf := &Config{
 		DRACPort:  806,
 		Namespace: "test",
@@ -124,9 +115,38 @@ func TestDRAC(t *testing.T) {
 		Dialer:    mockDialer,
 	}
 
-	_, err := DRAC(context.Background(), conf, "test")
+	dsClient := &mockDatastoreClient{
+		Creds: []*storage.Credentials{
+			fakeDrac,
+		},
+	}
 
+	failingDSClient := &mockDatastoreClient{
+		mustFail: true,
+	}
+
+	// Inject a mock DatastoreClient that knows just one host.
+	dsNewClient = func(ctx context.Context, projectID string, opts ...option.ClientOption) (iface.DatastoreClient, error) {
+		return dsClient, nil
+	}
+
+	out, err := DRAC(context.Background(), conf, "test")
 	if err != nil {
 		t.Errorf("DRAC() expected err = nil, got %v", err)
 	}
+	if out != "Server power operation successful" {
+		t.Errorf("DRAC() returned an unexpected output: %v", out)
+	}
+
+	// If credentials' retrieval from datastore fails, DRAC should fail too.
+	// Inject a mock DatastoreClient that fails no matter what.
+	dsNewClient = func(ctx context.Context, projectID string, opts ...option.ClientOption) (iface.DatastoreClient, error) {
+		return failingDSClient, nil
+	}
+
+	_, err = DRAC(context.Background(), conf, "test")
+	if err == nil {
+		t.Errorf("DRAC() expected err, got nil")
+	}
+
 }
