@@ -129,6 +129,4 @@ func TestDRAC(t *testing.T) {
 	if err != nil {
 		t.Errorf("DRAC() expected err = nil, got %v", err)
 	}
-
-	mockDialer
 }
