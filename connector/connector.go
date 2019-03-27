@@ -80,7 +80,7 @@ func (s *sshConnector) NewConnection(config *ConnectionConfig) (Connection, erro
 
 	return &sshConnection{
 		config: config,
-		client: &cl,
+		client: cl,
 	}, nil
 }
 
@@ -100,17 +100,39 @@ type Connection interface {
 
 type sshConnection struct {
 	config *ConnectionConfig
-	client *client
+	client client
 }
 
-func (c *sshConnection) exec() (string, error) {
-	return "TODO", nil
+// exec runs a command over the connection. It's meant to be used internally
+// inside wrappers such as Reboot().
+func (c *sshConnection) exec(cmd string) (string, error) {
+	session, err := c.client.NewSession()
+	if err != nil {
+		return "", err
+	}
+
+	output, err := session.CombinedOutput(cmd)
+	if err != nil {
+		log.Printf("Error executing command \"%v\": %v", cmd, err)
+	}
+
+	return string(output), err
 }
 
 func (c *sshConnection) Reboot() (string, error) {
-	return "TODO", nil
+	output, err := c.exec("racadm serveraction powercycle")
+	if err != nil {
+		log.Printf("Error executing reboot command: %v", err)
+		return "", err
+	}
+	return output, err
 }
 
 func (c *sshConnection) Close() error {
-	return nil
+	err := c.client.Close()
+	if err != nil {
+		log.Printf("Error while closing connection: %v", err)
+	}
+
+	return err
 }
