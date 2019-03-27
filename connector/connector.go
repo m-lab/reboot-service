@@ -103,7 +103,7 @@ type sshConnection struct {
 	client *client
 }
 
-func (c *sshConnection) Exec() (string, error) {
+func (c *sshConnection) exec() (string, error) {
 	return "TODO", nil
 }
 
