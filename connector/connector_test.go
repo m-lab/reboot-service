@@ -8,38 +8,38 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type mockDialerImpl struct {
+type mockDialer struct {
 	mustFail bool
 }
 
-type mockClientImpl struct{}
+type mockClient struct{}
 
-type mockSessionImpl struct {
+type mockSession struct {
 	messages map[string]string
 }
 
 // Dial is a fake implementation returning an empty ssh.Client
-func (d *mockDialerImpl) Dial(network, addr string,
+func (d *mockDialer) Dial(network, addr string,
 	config *ssh.ClientConfig) (client, error) {
 
 	if d.mustFail {
 		return nil, errors.New("method Dial() failed")
 	}
 
-	return &mockClientImpl{}, nil
+	return &mockClient{}, nil
 }
 
 // NewSession is a fake implementation returning an empty ssh.Session.
-func (*mockClientImpl) NewSession() (session, error) {
-	return fakeSession, nil
+func (*mockClient) NewSession() (session, error) {
+	return ms, nil
 }
 
-func (*mockClientImpl) Close() error {
+func (*mockClient) Close() error {
 	return nil
 }
 
 // CombinedOutput returns pre-made responses contained in a map.
-func (session *mockSessionImpl) CombinedOutput(cmd string) ([]byte, error) {
+func (session *mockSession) CombinedOutput(cmd string) ([]byte, error) {
 	if val, ok := session.messages[cmd]; ok {
 		return []byte(val), nil
 	}
@@ -47,14 +47,14 @@ func (session *mockSessionImpl) CombinedOutput(cmd string) ([]byte, error) {
 	return nil, fmt.Errorf("Undefined message for command: %v", cmd)
 }
 
-func (session *mockSessionImpl) Close() error {
+func (session *mockSession) Close() error {
 	return nil
 }
 
 var (
-	mockDialer = &mockDialerImpl{}
+	md = &mockDialer{}
 
-	fakeSession = &mockSessionImpl{
+	ms = &mockSession{
 		messages: map[string]string{
 			"racadm serveraction powercycle": "Server power operation successful",
 		},
@@ -63,7 +63,7 @@ var (
 
 func Test_sshConnector_NewConnection(t *testing.T) {
 	connector := &sshConnector{
-		dialer: mockDialer,
+		dialer: md,
 	}
 
 	config := &ConnectionConfig{
@@ -81,7 +81,7 @@ func Test_sshConnector_NewConnection(t *testing.T) {
 	}
 
 	// If dialer.Dial fails, NewConnection should fail.
-	mockDialer.mustFail = true
+	md.mustFail = true
 	_, err = connector.NewConnection(config)
 	if err == nil {
 		t.Errorf("NewConnection() - expected err, got nil.")

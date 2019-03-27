@@ -18,17 +18,17 @@ type session interface {
 	Close() error
 }
 
-type dialerImpl struct{}
+type sshDialer struct{}
 
-type clientImpl struct {
+type sshClient struct {
 	client *ssh.Client
 }
 
-func (cw clientImpl) NewSession() (session, error) { return cw.client.NewSession() }
-func (cw clientImpl) Close() error                 { return cw.client.Close() }
+func (cw sshClient) NewSession() (session, error) { return cw.client.NewSession() }
+func (cw sshClient) Close() error                 { return cw.client.Close() }
 
 // Dial is just a wrapper around ssh.Dial
-func (d *dialerImpl) Dial(network, addr string,
+func (d *sshDialer) Dial(network, addr string,
 	config *ssh.ClientConfig) (client, error) {
 
 	cl, err := ssh.Dial(network, addr, config)
@@ -37,5 +37,5 @@ func (d *dialerImpl) Dial(network, addr string,
 		return nil, err
 	}
 
-	return clientImpl{cl}, nil
+	return sshClient{cl}, nil
 }

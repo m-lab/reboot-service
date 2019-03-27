@@ -88,7 +88,7 @@ func (s *sshConnector) NewConnection(config *ConnectionConfig) (Connection, erro
 // implementation.
 func NewConnector() Connector {
 	return &sshConnector{
-		dialer: &dialerImpl{},
+		dialer: &sshDialer{},
 	}
 }
 
