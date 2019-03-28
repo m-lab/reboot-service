@@ -8,6 +8,8 @@ import (
 	"github.com/apex/log"
 )
 
+const kind = "Credentials"
+
 // Credentials is a struct holding the credentials for a given hostname,
 // plus some additional metadata such as the IP address and the model (DRAC
 // or otherwise).
@@ -28,15 +30,13 @@ type Provider interface {
 type datastoreProvider struct {
 	projectID string
 	namespace string
-	kind      string
 
 	connector connector
 }
 
 // NewProvider returns a Provider based on the default implementation (GCD).
-func NewProvider(projectID, namespace, kind string) Provider {
+func NewProvider(projectID, namespace string) Provider {
 	return &datastoreProvider{
-		kind:      kind,
 		projectID: projectID,
 		namespace: namespace,
 
@@ -53,7 +53,7 @@ func (d *datastoreProvider) FindCredentials(ctx context.Context, host string) (*
 
 	log.Debugf("Retrieving credentials for %v from namespace %v", host, d.namespace)
 
-	query := datastore.NewQuery(d.kind).Namespace(d.namespace)
+	query := datastore.NewQuery(kind).Namespace(d.namespace)
 	query = query.Filter("hostname = ", host)
 
 	var creds []*Credentials

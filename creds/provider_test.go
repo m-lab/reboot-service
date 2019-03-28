@@ -47,7 +47,7 @@ func (d *mockClient) GetAll(ctx context.Context, q *datastore.Query,
 }
 
 func TestNewProvider(t *testing.T) {
-	provider := NewProvider("projectID", "ns", "test")
+	provider := NewProvider("projectID", "ns")
 	if provider == nil {
 		t.Errorf("NewProvider() returned nil.")
 	}
@@ -74,7 +74,6 @@ func TestFindCredentials(t *testing.T) {
 	}
 	provider := &datastoreProvider{
 		connector: connector,
-		kind:      "test",
 		namespace: "ns",
 		projectID: "projectID",
 	}

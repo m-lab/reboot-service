@@ -3,12 +3,12 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"fmt"
 	"net/http"
 
-	"github.com/m-lab/reboot-service/drac"
+	"github.com/m-lab/reboot-service/connector"
+
+	"github.com/m-lab/reboot-service/creds"
 
 	"github.com/m-lab/go/flagx"
 	"github.com/m-lab/go/rtx"
@@ -36,29 +36,6 @@ const (
 	defaultDRACPort  = 806
 )
 
-func handleDRACReboot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	host := r.URL.Query().Get("host")
-	if len(host) == 0 {
-		w.Write([]byte("URL parameter 'host' is missing"))
-		log.Info("URL parameter 'host' is missing")
-		return
-	}
-
-	output, err := reboot.DRAC(context.Background(), rebootConfig, host)
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("Reboot failed: %v", err)))
-		log.WithError(err).Warn("Reboot failed")
-		return
-	}
-
-	w.Write([]byte(output))
-}
-
 func init() {
 	log.SetLevel(log.DebugLevel)
 	flag.StringVar(&listenAddr, "listenaddr", ":8080", "Address to listen on")
@@ -75,7 +52,6 @@ func createRebootConfig() *reboot.Config {
 		ProjectID: projectID,
 		SSHPort:   int32(sshPort),
 		DRACPort:  int32(dracPort),
-		Dialer:    &drac.DialerImpl{},
 	}
 }
 
@@ -85,6 +61,10 @@ func main() {
 
 	rebootConfig = createRebootConfig()
 
-	http.HandleFunc("/v1/reboot", handleDRACReboot)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	credentials := creds.NewProvider(projectID, namespace)
+	connector := connector.NewConnector()
+	rebootHandler := reboot.NewHandler(rebootConfig, credentials, connector)
+
+	http.Handle("/v1/reboot", rebootHandler)
+	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
