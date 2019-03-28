@@ -11,6 +11,7 @@ import (
 )
 
 type mockConnector struct {
+	client   client
 	mustFail bool
 }
 
@@ -18,7 +19,7 @@ func (c *mockConnector) NewClient(ctx context.Context, projectID string, opts ..
 	if c.mustFail {
 		return nil, errors.New("NewClient() method failed")
 	}
-	return mc, nil
+	return c.client, nil
 }
 
 // mockDatastoreClient is a fake DatastoreClient for testing.
@@ -43,39 +44,32 @@ func (d *mockClient) GetAll(ctx context.Context, q *datastore.Query,
 	return nil, nil
 }
 
-const (
-	testHost      = "test"
-	testUser      = "user"
-	testPass      = "pass"
-	testModel     = "drac"
-	testAddress   = "addr"
-	testNamespace = "test"
-)
-
-var fakeDrac = &Credentials{
-	Hostname: "host",
-	Username: "user",
-	Password: "pass",
-	Model:    "model",
-	Address:  "address",
-}
-
-var mc = &mockClient{
-	Creds: []*Credentials{
-		fakeDrac,
-	},
-}
-
 func TestNewProvider(t *testing.T) {
-	_, err := NewProvider("projectID", "ns", "test")
-	if err != nil {
-		t.Errorf("NewProvider() unexpected error: %v", err)
+	provider := NewProvider("projectID", "ns", "test")
+	if provider == nil {
+		t.Errorf("NewProvider() returned nil.")
 	}
 }
 
 func Test_datastoreProvider_FindCredentials(t *testing.T) {
+	// Create a mockClient returning fake Credentials.
+	fakeDrac := &Credentials{
+		Hostname: "host",
+		Username: "user",
+		Password: "pass",
+		Model:    "model",
+		Address:  "address",
+	}
+	mc := &mockClient{
+		Creds: []*Credentials{
+			fakeDrac,
+		},
+	}
+
 	// Inject mockConnector to simulate network failures.
-	connector := &mockConnector{}
+	connector := &mockConnector{
+		client: mc,
+	}
 	provider := &datastoreProvider{
 		connector: connector,
 		kind:      "test",
