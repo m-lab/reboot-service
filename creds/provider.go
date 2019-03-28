@@ -34,14 +34,14 @@ type datastoreProvider struct {
 }
 
 // NewProvider returns a Provider based on the default implementation (GCD).
-func NewProvider(projectID, namespace, kind string) (Provider, error) {
+func NewProvider(projectID, namespace, kind string) Provider {
 	return &datastoreProvider{
 		kind:      kind,
 		projectID: projectID,
 		namespace: namespace,
 
 		connector: &datastoreConnector{},
-	}, nil
+	}
 }
 
 func (d *datastoreProvider) FindCredentials(ctx context.Context, host string) (*Credentials, error) {
