@@ -38,7 +38,9 @@ func (d *mockClient) GetAll(ctx context.Context, q *datastore.Query,
 
 	if !d.skipAppend {
 		creds := dst.(*[]*Credentials)
-		*creds = append(*creds, fakeDrac)
+		for _, cred := range d.Creds {
+			*creds = append(*creds, cred)
+		}
 	}
 
 	return nil, nil
@@ -51,7 +53,7 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
-func Test_datastoreProvider_FindCredentials(t *testing.T) {
+func TestFindCredentials(t *testing.T) {
 	// Create a mockClient returning fake Credentials.
 	fakeDrac := &Credentials{
 		Hostname: "host",
