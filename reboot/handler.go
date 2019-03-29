@@ -58,7 +58,7 @@ func (h *Handler) rebootDRAC(ctx context.Context, host string) (string, error) {
 	conn, err := h.connector.NewConnection(connectionConfig)
 	if err != nil {
 		log.WithError(err).
-			Errorf("Cannot connect to host: %s:%s with username %s",
+			Errorf("Cannot connect to host: %s:%d with username %s",
 				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
 		return "", err
 	}
