@@ -81,6 +81,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	host := r.URL.Query().Get("host")
 	if len(host) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("URL parameter 'host' is missing"))
 		log.Info("URL parameter 'host' is missing")
 		return
@@ -88,6 +89,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := h.rebootDRAC(context.Background(), host)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Reboot failed: %v", err)))
 		log.WithError(err).Warn("Reboot failed")
 		return
