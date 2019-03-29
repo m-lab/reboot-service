@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"net/http"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/m-lab/reboot-service/creds"
 
 	"github.com/m-lab/go/flagx"
+	"github.com/m-lab/go/httpx"
 	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/reboot-service/reboot"
 
@@ -27,6 +29,9 @@ var (
 	dsNewClient = datastore.NewClient
 
 	rebootConfig *reboot.Config
+
+	// Context for the whole program.
+	ctx, cancel = context.WithCancel(context.Background())
 )
 
 const (
@@ -59,12 +64,24 @@ func main() {
 	flag.Parse()
 	rtx.Must(flagx.ArgsFromEnv(flag.CommandLine), "Cannot parse env args")
 
+	// Initialize configuration, credentials provider and connector.
 	rebootConfig = createRebootConfig()
-
 	credentials := creds.NewProvider(projectID, namespace)
 	connector := connector.NewConnector()
+
 	rebootHandler := reboot.NewHandler(rebootConfig, credentials, connector)
 
-	http.Handle("/v1/reboot", rebootHandler)
-	log.Fatal(http.ListenAndServe(listenAddr, nil))
+	// Initialize HTTP server.
+	rebootMux := http.NewServeMux()
+	rebootMux.Handle("/v1/reboot", rebootHandler)
+
+	s := &http.Server{
+		Addr:    listenAddr,
+		Handler: rebootMux,
+	}
+	rtx.Must(httpx.ListenAndServeAsync(s), "Could not start HTTP server")
+	defer s.Close()
+
+	// Keep serving until the context is canceled.
+	<-ctx.Done()
 }
