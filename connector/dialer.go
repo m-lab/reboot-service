@@ -2,12 +2,12 @@ package connector
 
 import "golang.org/x/crypto/ssh"
 
-// Dialer is an interface to allow mocking of ssh.Dial in unit tests.
+// dialer is an interface to allow mocking of ssh.Dial in unit tests.
 type dialer interface {
 	Dial(network, addr string, config *ssh.ClientConfig) (client, error)
 }
 
-// Client is an interface to allow mocking of ssh.Client in unit tests.
+// client is an interface to allow mocking of ssh.Client in unit tests.
 type client interface {
 	NewSession() (session, error)
 	Close() error
