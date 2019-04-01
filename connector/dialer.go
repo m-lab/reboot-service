@@ -24,6 +24,7 @@ type sshClient struct {
 	client *ssh.Client
 }
 
+// TODO(roberto): test the methods in this file.
 func (cw sshClient) NewSession() (session, error) { return cw.client.NewSession() }
 func (cw sshClient) Close() error                 { return cw.client.Close() }
 
