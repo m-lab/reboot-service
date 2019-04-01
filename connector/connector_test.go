@@ -99,7 +99,9 @@ func Test_sshConnector_NewConnection(t *testing.T) {
 
 func TestNewConnector(t *testing.T) {
 	// Just test that a default Connector is created
-	_ = NewConnector()
+	if NewConnector() == nil {
+		t.Errorf("NewConnector() returned nil.")
+	}
 }
 
 func Test_sshConnection_Reboot(t *testing.T) {
