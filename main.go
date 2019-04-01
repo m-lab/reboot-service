@@ -21,11 +21,12 @@ import (
 )
 
 var (
-	listenAddr  string
-	projectID   string
-	namespace   string
-	sshPort     int
-	dracPort    int
+	listenAddr = flag.String("listenaddr", ":8080", "Address to listen on")
+
+	projectID   = flag.String("project", defaultProjID, "GCD project ID")
+	namespace   = flag.String("namespace", defaultNamespace, "GCD namespace")
+	sshPort     = flag.Int("sshport", defaultSSHPort, "SSH port to use")
+	dracPort    = flag.Int("dracport", defaultDRACPort, "DRAC port to use")
 	dsNewClient = datastore.NewClient
 
 	rebootConfig *reboot.Config
@@ -43,20 +44,15 @@ const (
 
 func init() {
 	log.SetLevel(log.DebugLevel)
-	flag.StringVar(&listenAddr, "listenaddr", ":8080", "Address to listen on")
-	flag.StringVar(&projectID, "project", defaultProjID, "GCD project ID")
-	flag.StringVar(&namespace, "namespace", defaultNamespace, "GCD namespace")
-	flag.IntVar(&sshPort, "sshport", defaultSSHPort, "SSH port to use")
-	flag.IntVar(&dracPort, "dracport", defaultDRACPort, "DRAC port to use")
 }
 
 func createRebootConfig() *reboot.Config {
 	// Initialize configuration based on passed flags.
 	return &reboot.Config{
-		Namespace: namespace,
-		ProjectID: projectID,
-		SSHPort:   int32(sshPort),
-		DRACPort:  int32(dracPort),
+		Namespace: *namespace,
+		ProjectID: *projectID,
+		SSHPort:   int32(*sshPort),
+		DRACPort:  int32(*dracPort),
 	}
 }
 
@@ -66,7 +62,7 @@ func main() {
 
 	// Initialize configuration, credentials provider and connector.
 	rebootConfig = createRebootConfig()
-	credentials := creds.NewProvider(projectID, namespace)
+	credentials := creds.NewProvider(*projectID, *namespace)
 	connector := connector.NewConnector()
 
 	rebootHandler := reboot.NewHandler(rebootConfig, credentials, connector)
@@ -76,7 +72,7 @@ func main() {
 	rebootMux.Handle("/v1/reboot", rebootHandler)
 
 	s := &http.Server{
-		Addr:    listenAddr,
+		Addr:    *listenAddr,
 		Handler: rebootMux,
 	}
 	rtx.Must(httpx.ListenAndServeAsync(s), "Could not start HTTP server")
