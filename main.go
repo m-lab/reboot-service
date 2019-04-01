@@ -57,6 +57,8 @@ func createRebootConfig() *reboot.Config {
 }
 
 func main() {
+	// TODO(roberto): create end-to-end test that calls main() verifies that
+	// the "wiring" does not cause any crashes.
 	flag.Parse()
 	rtx.Must(flagx.ArgsFromEnv(flag.CommandLine), "Cannot parse env args")
 
