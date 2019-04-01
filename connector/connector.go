@@ -45,14 +45,18 @@ func (s *sshConnector) NewConnection(config *ConnectionConfig) (Connection, erro
 	privateBytes, err := ioutil.ReadFile(filepath.Clean(config.PrivateKeyFile))
 
 	if err != nil {
+		// If a private key cannot be read, we still want to try logging in
+		// with a username/password pair, thus this is just a warning.
+		// This also allows to skip private key auth by passing an empty
+		// string.
 		log.Println("Cannot read private key: ", err)
 	} else {
 
 		privateKey, err := ssh.ParsePrivateKey(privateBytes)
 
 		if err != nil {
-			// If a private key exists but it's not parseable, the connection
-			// is not created.
+			// If a private key file is provided and can be read but the
+			// content is a not a valid private key,
 			log.Println("Cannot parse private key: ", err)
 			return nil, err
 		}
