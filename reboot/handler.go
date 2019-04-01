@@ -21,6 +21,9 @@ type Config struct {
 	PrivateKeyPath string
 }
 
+// NewHandler creates a new Handler for the /v1/reboot endpoint.
+// Configuration, credential provider and connector need to be passed as
+// arguments.
 func NewHandler(config *Config, credsProvider creds.Provider, connector connector.Connector) *Handler {
 	return &Handler{
 		config:        config,
