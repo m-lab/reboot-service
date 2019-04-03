@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"time"
 
 	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
@@ -15,7 +17,7 @@ import (
 var (
 	metricDRACReboots = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "reboot_drac_reboots_total",
+			Name: "reboot_drac_total",
 			Help: "Total number of successful DRAC reboots",
 		},
 		[]string{
@@ -23,6 +25,11 @@ var (
 			"machine",
 		},
 	)
+	metricDRACRebootTimeHist = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "reboot_drac_duration_seconds",
+		Help:    "Duration histogram for successful DRAC reboots, in seconds",
+		Buckets: []float64{15, 30, 45, 60},
+	})
 )
 
 // Config holds the configuration for the reboot handler
@@ -55,7 +62,16 @@ type Handler struct {
 	connector     connector.Connector
 }
 
-func (h *Handler) rebootDRAC(ctx context.Context, host string) (string, error) {
+func (h *Handler) rebootDRAC(ctx context.Context, node string, site string) (string, error) {
+	// There are different ways a DRAC hostname can be provided:
+	// - mlab1.lga0t
+	// - mlab1d.lga0t
+	// - mlab1.lga0t.measurement-lab.org
+	// - mlab1d.lga0t.measurement-lab.org
+	// To make sure this is handled in a flexible way, the site and host parts
+	// are provided separately and re-assembled here.
+	host := makeDRACHostname(node, site)
+
 	// Retrieve credentials from the credentials provider.
 	creds, err := h.credsProvider.FindCredentials(ctx, host)
 	if err != nil {
@@ -81,13 +97,15 @@ func (h *Handler) rebootDRAC(ctx context.Context, host string) (string, error) {
 		return "", err
 	}
 
+	start := time.Now()
 	output, err := conn.Reboot()
 	if err != nil {
 		log.WithError(err).Errorf("Cannot issue reboot command")
 		return "", err
 	}
 
-	metricDRACReboots.WithLabelValues("TODO", "TODO").Inc()
+	metricDRACReboots.WithLabelValues(site, node).Inc()
+	metricDRACRebootTimeHist.Observe(time.Since(start).Seconds())
 	return output, nil
 }
 
@@ -106,7 +124,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := h.rebootDRAC(context.Background(), host)
+	// Split hostname into site/node. If site and node cannot be extracted,
+	// we are reasonably sure this is not a valid M-Lab node's DRAC.
+	target := splitSiteNode(host)
+	if len(target) != 2 {
+		errStr := fmt.Sprintf(
+			"The specified hostname is not a valid M-Lab node: %s", host)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(errStr))
+		log.Errorf(errStr)
+		return
+	}
+
+	output, err := h.rebootDRAC(context.Background(), target[0], target[1])
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Reboot failed: %v", err)))
@@ -115,5 +145,25 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(output))
+}
 
+// splitSiteNode splits a hostname into a [site, node] slice
+func splitSiteNode(hostname string) []string {
+	regex := regexp.MustCompile("(mlab[1-4]d?)\\.([a-zA-Z]{3}[0-9t]{2}).*")
+	result := regex.FindStringSubmatch(hostname)
+	if len(result) != 3 {
+		return nil
+	}
+
+	return []string{result[1], result[2]}
+}
+
+// makeDRACHostname returns a full DRAC hostname made from the specified node
+// and site.
+func makeDRACHostname(node string, site string) string {
+	if node[len(node)-1] != 'd' {
+		node = node + "d"
+	}
+
+	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
 }
