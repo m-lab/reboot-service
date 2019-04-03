@@ -8,6 +8,21 @@ import (
 	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
 	"github.com/m-lab/reboot-service/creds"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	metricDRACReboots = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "reboot_drac_reboots_total",
+			Help: "Total number of successful DRAC reboots",
+		},
+		[]string{
+			"site",
+			"machine",
+		},
+	)
 )
 
 // Config holds the configuration for the reboot handler
@@ -72,6 +87,7 @@ func (h *Handler) rebootDRAC(ctx context.Context, host string) (string, error) {
 		return "", err
 	}
 
+	metricDRACReboots.WithLabelValues("TODO", "TODO").Inc()
 	return output, nil
 }
 

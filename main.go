@@ -13,33 +13,34 @@ import (
 
 	"github.com/m-lab/go/flagx"
 	"github.com/m-lab/go/httpx"
+	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/reboot-service/reboot"
 
-	"cloud.google.com/go/datastore"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	listenAddr = flag.String("listenaddr", ":8080", "Address to listen on")
-
-	projectID   = flag.String("project", defaultProjID, "GCD project ID")
-	namespace   = flag.String("namespace", defaultNamespace, "GCD namespace")
-	sshPort     = flag.Int("sshport", defaultSSHPort, "SSH port to use")
-	dracPort    = flag.Int("dracport", defaultDRACPort, "DRAC port to use")
-	dsNewClient = datastore.NewClient
-
-	rebootConfig *reboot.Config
+	// Command line flags.
+	listenAddr = flag.String("listenaddr", defaultListenAddr, "Address to listen on")
+	promAddr   = flag.String("promaddr", defaultPromPort,
+		"Address to listen on for Prometheus metrics")
+	projectID = flag.String("project", defaultProjID, "GCD project ID")
+	namespace = flag.String("namespace", defaultNamespace, "GCD namespace")
+	sshPort   = flag.Int("sshport", defaultSSHPort, "SSH port to use")
+	dracPort  = flag.Int("dracport", defaultDRACPort, "DRAC port to use")
 
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
 )
 
 const (
-	defaultProjID    = "mlab-sandbox"
-	defaultNamespace = "reboot-api"
-	defaultSSHPort   = 22
-	defaultDRACPort  = 806
+	defaultListenAddr = ":8080"
+	defaultPromPort   = ":8081"
+	defaultProjID     = "mlab-sandbox"
+	defaultNamespace  = "reboot-api"
+	defaultSSHPort    = 22
+	defaultDRACPort   = 806
 )
 
 func init() {
@@ -63,7 +64,7 @@ func main() {
 	rtx.Must(flagx.ArgsFromEnv(flag.CommandLine), "Cannot parse env args")
 
 	// Initialize configuration, credentials provider and connector.
-	rebootConfig = createRebootConfig()
+	rebootConfig := createRebootConfig()
 	credentials := creds.NewProvider(*projectID, *namespace)
 	connector := connector.NewConnector()
 
@@ -79,6 +80,9 @@ func main() {
 	}
 	rtx.Must(httpx.ListenAndServeAsync(s), "Could not start HTTP server")
 	defer s.Close()
+
+	// Initialize Prometheus server for monitoring.
+	prometheusx.MustStartPrometheus(*promAddr)
 
 	// Keep serving until the context is canceled.
 	<-ctx.Done()
