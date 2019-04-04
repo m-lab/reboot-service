@@ -30,6 +30,16 @@ var (
 		Help:    "Duration histogram for successful DRAC reboots, in seconds",
 		Buckets: []float64{15, 30, 45, 60},
 	})
+	metricCoreOSReboots = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "reboot_coreos_total",
+			Help: "Total number of successful CoreOS reboots",
+		},
+		[]string{
+			"site",
+			"machine",
+		},
+	)
 )
 
 // Config holds the configuration for the reboot handler
@@ -63,10 +73,11 @@ type Handler struct {
 	connector     connector.Connector
 }
 
-func (h *Handler) rebootHost(ctx context.Context, host string) (string, error) {
-	// To reboot the host OS a "reboot-api" user is created, and the only way
+func (h *Handler) rebootCoreOS(ctx context.Context, node string, site string) (string, error) {
+	// To reboot CoreOS a "reboot-api" user is created, and the only way
 	// to authenticate is via a private key. Logging in with such user will
 	// automatically trigger a "systemctl reboot" command.
+	host := makeCoreOSHostname(node, site)
 
 	// Connect to the host
 	connectionConfig := &connector.ConnectionConfig{
@@ -91,6 +102,7 @@ func (h *Handler) rebootHost(ctx context.Context, host string) (string, error) {
 		return "", err
 	}
 
+	metricCoreOSReboots.WithLabelValues(site, node).Inc()
 	return "System reboot successful", nil
 }
 
@@ -156,23 +168,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Split hostname into site/node. If site and node cannot be extracted,
+	// we are reasonably sure this is not a valid M-Lab node's DRAC.
+	target := splitSiteNode(host)
+	if len(target) != 2 {
+		errStr := fmt.Sprintf(
+			"The specified hostname is not a valid M-Lab node: %s", host)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(errStr))
+		log.Errorf(errStr)
+		return
+	}
+
 	method := r.URL.Query().Get("method")
 	var output string
 	var err error
 	if method == "host" {
-		output, err = h.rebootHost(context.Background(), host)
+		output, err = h.rebootCoreOS(context.Background(), target[0], target[1])
 	} else { // default method is DRAC
-		// Split hostname into site/node. If site and node cannot be extracted,
-		// we are reasonably sure this is not a valid M-Lab node's DRAC.
-		target := splitSiteNode(host)
-		if len(target) != 2 {
-			errStr := fmt.Sprintf(
-				"The specified hostname is not a valid M-Lab node: %s", host)
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(errStr))
-			log.Errorf(errStr)
-			return
-		}
 		output, err = h.rebootDRAC(context.Background(), target[0], target[1])
 	}
 
@@ -205,5 +218,9 @@ func makeDRACHostname(node string, site string) string {
 		node = node + "d"
 	}
 
+	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
+}
+
+func makeCoreOSHostname(node string, site string) string {
 	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
 }
