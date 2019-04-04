@@ -123,13 +123,26 @@ func (c *sshConnection) exec(cmd string) (string, error) {
 	return string(output), err
 }
 
+// Reboot reboots the node via this Connection. The method to perform the
+// reboot is chosen depending on sshConnection.ConnType.
 func (c *sshConnection) Reboot() (string, error) {
-	output, err := c.exec("racadm serveraction powercycle")
-	if err != nil {
-		log.Printf("Error executing reboot command: %v", err)
-		return "", err
+	var output string
+	var err error
+
+	if c.config.ConnType == HostConnection {
+		// To actually start an SSH session (and thus trigger a reboot) a
+		// command must be executed.
+		output, err = c.exec("")
+		if err != nil {
+			return "", err
+		}
+	} else { // reboot via DRAC (default)
+		output, err = c.exec("racadm serveraction powercycle")
+		if err != nil {
+			return "", err
+		}
 	}
-	return output, err
+	return output, nil
 }
 
 func (c *sshConnection) Close() error {

@@ -40,6 +40,7 @@ type Config struct {
 	SSHPort  int32
 	DRACPort int32
 
+	RebootUser     string
 	PrivateKeyPath string
 }
 
@@ -60,6 +61,37 @@ type Handler struct {
 
 	credsProvider creds.Provider
 	connector     connector.Connector
+}
+
+func (h *Handler) rebootHost(ctx context.Context, host string) (string, error) {
+	// To reboot the host OS a "reboot-api" user is created, and the only way
+	// to authenticate is via a private key. Logging in with such user will
+	// automatically trigger a "systemctl reboot" command.
+
+	// Connect to the host
+	connectionConfig := &connector.ConnectionConfig{
+		Hostname:       host,
+		Username:       h.config.RebootUser,
+		Port:           h.config.SSHPort,
+		PrivateKeyFile: h.config.PrivateKeyPath,
+		ConnType:       connector.HostConnection,
+	}
+
+	conn, err := h.connector.NewConnection(connectionConfig)
+	if err != nil {
+		log.WithError(err).
+			Errorf("Cannot connect to host: %s:%d with username %s",
+				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
+		return "", err
+	}
+
+	_, err = conn.Reboot()
+	if err != nil {
+		log.WithError(err).Errorf("Cannot issue reboot command (type: %v)", connectionConfig.ConnType)
+		return "", err
+	}
+
+	return "System reboot successful", nil
 }
 
 func (h *Handler) rebootDRAC(ctx context.Context, node string, site string) (string, error) {
@@ -92,7 +124,7 @@ func (h *Handler) rebootDRAC(ctx context.Context, node string, site string) (str
 	conn, err := h.connector.NewConnection(connectionConfig)
 	if err != nil {
 		log.WithError(err).
-			Errorf("Cannot connect to host: %s:%d with username %s",
+			Errorf("Cannot connect to DRAC: %s:%d with username %s",
 				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
 		return "", err
 	}
@@ -124,26 +156,34 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Split hostname into site/node. If site and node cannot be extracted,
-	// we are reasonably sure this is not a valid M-Lab node's DRAC.
-	target := splitSiteNode(host)
-	if len(target) != 2 {
-		errStr := fmt.Sprintf(
-			"The specified hostname is not a valid M-Lab node: %s", host)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(errStr))
-		log.Errorf(errStr)
-		return
+	method := r.URL.Query().Get("method")
+	var output string
+	var err error
+	if method == "host" {
+		output, err = h.rebootHost(context.Background(), host)
+	} else { // default method is DRAC
+		// Split hostname into site/node. If site and node cannot be extracted,
+		// we are reasonably sure this is not a valid M-Lab node's DRAC.
+		target := splitSiteNode(host)
+		if len(target) != 2 {
+			errStr := fmt.Sprintf(
+				"The specified hostname is not a valid M-Lab node: %s", host)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(errStr))
+			log.Errorf(errStr)
+			return
+		}
+		output, err = h.rebootDRAC(context.Background(), target[0], target[1])
 	}
 
-	output, err := h.rebootDRAC(context.Background(), target[0], target[1])
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Reboot failed: %v", err)))
-		log.WithError(err).Warn("Reboot failed")
+		log.WithError(err).Error("Reboot failed")
 		return
 	}
 
+	log.WithField("output", output).Infof("%v rebooted successfully.", host)
 	w.Write([]byte(output))
 }
 

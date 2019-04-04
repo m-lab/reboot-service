@@ -7,6 +7,7 @@ import (
 	"flag"
 	"net/http"
 
+	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
 
 	"github.com/m-lab/reboot-service/creds"
@@ -16,8 +17,6 @@ import (
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/reboot-service/reboot"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -25,10 +24,13 @@ var (
 	listenAddr = flag.String("listenaddr", defaultListenAddr, "Address to listen on")
 	promAddr   = flag.String("promaddr", defaultPromPort,
 		"Address to listen on for Prometheus metrics")
-	projectID = flag.String("project", defaultProjID, "GCD project ID")
-	namespace = flag.String("namespace", defaultNamespace, "GCD namespace")
-	sshPort   = flag.Int("sshport", defaultSSHPort, "SSH port to use")
-	dracPort  = flag.Int("dracport", defaultDRACPort, "DRAC port to use")
+	projectID  = flag.String("datastore.project", defaultProjID, "GCD project ID")
+	namespace  = flag.String("datastore.namespace", defaultNamespace, "GCD namespace")
+	rebootUser = flag.String("reboot.user", defaultRebootUser, "User for rebooting CoreOS hosts")
+	keyPath    = flag.String("reboot.key", "", "SSH private key path")
+
+	sshPort  = flag.Int("reboot.sshport", defaultSSHPort, "SSH port to use")
+	dracPort = flag.Int("reboot.dracport", defaultDRACPort, "DRAC port to use")
 
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
@@ -41,10 +43,11 @@ const (
 	defaultNamespace  = "reboot-api"
 	defaultSSHPort    = 22
 	defaultDRACPort   = 806
+	defaultRebootUser = "reboot-api"
 )
 
 func init() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 }
 
 func createRebootConfig() *reboot.Config {
@@ -54,6 +57,9 @@ func createRebootConfig() *reboot.Config {
 		ProjectID: *projectID,
 		SSHPort:   int32(*sshPort),
 		DRACPort:  int32(*dracPort),
+
+		RebootUser:     *rebootUser,
+		PrivateKeyPath: *keyPath,
 	}
 }
 
