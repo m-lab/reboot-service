@@ -4,10 +4,32 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"time"
 
 	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
 	"github.com/m-lab/reboot-service/creds"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	metricBMCReboots = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "reboot_bmc_total",
+			Help: "Total number of successful BMC reboots",
+		},
+		[]string{
+			"site",
+			"machine",
+		},
+	)
+	metricBMCRebootTimeHist = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "reboot_bmc_duration_seconds",
+		Help:    "Duration histogram for successful BMC reboots, in seconds",
+		Buckets: []float64{15, 30, 45, 60},
+	})
 )
 
 // Config holds the configuration for the reboot handler
@@ -15,8 +37,8 @@ type Config struct {
 	ProjectID string
 	Namespace string
 
-	SSHPort  int32
-	DRACPort int32
+	SSHPort int32
+	BMCPort int32
 
 	PrivateKeyPath string
 }
@@ -40,7 +62,16 @@ type Handler struct {
 	connector     connector.Connector
 }
 
-func (h *Handler) rebootDRAC(ctx context.Context, host string) (string, error) {
+func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (string, error) {
+	// There are different ways a BMC hostname can be provided:
+	// - mlab1.lga0t
+	// - mlab1d.lga0t
+	// - mlab1.lga0t.measurement-lab.org
+	// - mlab1d.lga0t.measurement-lab.org
+	// To make sure this is handled in a flexible way, the site and host parts
+	// are provided separately and re-assembled here.
+	host := makeBMCHostname(node, site)
+
 	// Retrieve credentials from the credentials provider.
 	creds, err := h.credsProvider.FindCredentials(ctx, host)
 	if err != nil {
@@ -53,9 +84,9 @@ func (h *Handler) rebootDRAC(ctx context.Context, host string) (string, error) {
 		Hostname:       creds.Address,
 		Username:       creds.Username,
 		Password:       creds.Password,
-		Port:           h.config.DRACPort,
+		Port:           h.config.BMCPort,
 		PrivateKeyFile: h.config.PrivateKeyPath,
-		ConnType:       connector.DRACConnection,
+		ConnType:       connector.BMCConnection,
 	}
 
 	conn, err := h.connector.NewConnection(connectionConfig)
@@ -66,12 +97,15 @@ func (h *Handler) rebootDRAC(ctx context.Context, host string) (string, error) {
 		return "", err
 	}
 
+	start := time.Now()
 	output, err := conn.Reboot()
 	if err != nil {
 		log.WithError(err).Errorf("Cannot issue reboot command")
 		return "", err
 	}
 
+	metricBMCReboots.WithLabelValues(site, node).Inc()
+	metricBMCRebootTimeHist.Observe(time.Since(start).Seconds())
 	return output, nil
 }
 
@@ -90,7 +124,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := h.rebootDRAC(context.Background(), host)
+	// Split hostname into site/node. If site and node cannot be extracted,
+	// we are reasonably sure this is not a valid M-Lab node's BMC.
+	node, site, err := parseNodeSite(host)
+	if err != nil {
+		errStr := fmt.Sprintf(
+			"The specified hostname is not a valid M-Lab node: %s", host)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(errStr))
+		log.Errorf(errStr)
+		return
+	}
+
+	output, err := h.rebootBMC(context.Background(), node, site)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Reboot failed: %v", err)))
@@ -99,5 +145,26 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(output))
+}
 
+// parseNodeSite extracts node and site from a full hostname.
+func parseNodeSite(hostname string) (string, string, error) {
+	regex := regexp.MustCompile("(mlab[1-4]d?)\\.([a-zA-Z]{3}[0-9t]{2}).*")
+	result := regex.FindStringSubmatch(hostname)
+	if len(result) != 3 {
+		return "", "",
+			fmt.Errorf("The specified hostname is not a valid M-Lab node: %s", hostname)
+	}
+
+	return result[1], result[2], nil
+}
+
+// makeBMCHostname returns a full BMC hostname made from the specified node
+// and site (node + 'd' + site + "measurement-lab.org").
+func makeBMCHostname(node string, site string) string {
+	if node[len(node)-1] != 'd' {
+		node = node + "d"
+	}
+
+	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
 }

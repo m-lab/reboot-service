@@ -14,10 +14,13 @@ import (
 type ConnType int
 
 const (
-	// DRACConnection is an SSH connection to the node's DRAC
-	DRACConnection ConnType = 0
+	// UnspecifiedConnection is a connection with no type defined.
+	// This value should not be used.
+	UnspecifiedConnection ConnType = 0
+	// BMCConnection is an SSH connection to the node's BMC
+	BMCConnection ConnType = 1
 	// HostConnection is an SSH connection to the node's OS
-	HostConnection ConnType = 1
+	HostConnection ConnType = 2
 )
 
 // ConnectionConfig holds the configuration for a Connection

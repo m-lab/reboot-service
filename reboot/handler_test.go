@@ -75,12 +75,12 @@ func TestServeHTTP(t *testing.T) {
 		connectionMustFail bool
 	}{
 		{
-			req:    httptest.NewRequest("POST", "/v1/reboot?host=test", nil),
+			req:    httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
 			status: http.StatusOK,
 			body:   "Server power operation successful",
 		},
 		{
-			req:    httptest.NewRequest("GET", "/v1/reboot?host=test", nil),
+			req:    httptest.NewRequest("GET", "/v1/reboot?host=mlab1.lga0t", nil),
 			status: http.StatusMethodNotAllowed,
 			body:   "",
 		},
@@ -90,22 +90,27 @@ func TestServeHTTP(t *testing.T) {
 			body:   "",
 		},
 		{
-			req:           httptest.NewRequest("POST", "/v1/reboot?host=test", nil),
+			req:           httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
 			credsMustFail: true,
 			status:        http.StatusInternalServerError,
 			body:          "",
 		},
 		{
-			req:               httptest.NewRequest("POST", "/v1/reboot?host=test", nil),
+			req:               httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
 			connectorMustFail: true,
 			status:            http.StatusInternalServerError,
 			body:              "",
 		},
 		{
-			req:                httptest.NewRequest("POST", "/v1/reboot?host=test", nil),
+			req:                httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
 			connectionMustFail: true,
 			status:             http.StatusInternalServerError,
 			body:               "",
+		},
+		{
+			req:    httptest.NewRequest("POST", "/v1/reboot?host=thisshouldfail", nil),
+			status: http.StatusBadRequest,
+			body:   "The specified hostname is not a valid M-Lab node: thisshouldfail",
 		},
 	}
 
@@ -115,7 +120,7 @@ func TestServeHTTP(t *testing.T) {
 		config: &Config{
 			ProjectID:      "test",
 			PrivateKeyPath: "",
-			DRACPort:       806,
+			BMCPort:        806,
 			SSHPort:        22,
 			Namespace:      "test",
 		},
