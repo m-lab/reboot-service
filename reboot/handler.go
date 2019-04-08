@@ -26,7 +26,7 @@ var (
 		},
 	)
 	metricBMCRebootTimeHist = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "reboot_drac_duration_seconds",
+		Name:    "reboot_bmc_duration_seconds",
 		Help:    "Duration histogram for successful BMC reboots, in seconds",
 		Buckets: []float64{15, 30, 45, 60},
 	})
