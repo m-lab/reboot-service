@@ -82,7 +82,8 @@ func main() {
 	defer s.Close()
 
 	// Initialize Prometheus server for monitoring.
-	prometheusx.MustStartPrometheus(*promAddr)
+	promServer := prometheusx.MustStartPrometheus(*promAddr)
+	defer promServer.Close()
 
 	// Keep serving until the context is canceled.
 	<-ctx.Done()
