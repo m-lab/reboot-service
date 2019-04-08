@@ -30,10 +30,10 @@ var (
 		Help:    "Duration histogram for successful DRAC reboots, in seconds",
 		Buckets: []float64{15, 30, 45, 60},
 	})
-	metricCoreOSReboots = promauto.NewCounterVec(
+	metricHostReboots = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "reboot_coreos_total",
-			Help: "Total number of successful CoreOS reboots",
+			Name: "reboot_host_total",
+			Help: "Total number of successful host reboots",
 		},
 		[]string{
 			"site",
@@ -73,11 +73,11 @@ type Handler struct {
 	connector     connector.Connector
 }
 
-func (h *Handler) rebootCoreOS(ctx context.Context, node string, site string) (string, error) {
-	// To reboot CoreOS a "reboot-api" user is created, and the only way
+func (h *Handler) rebootHost(ctx context.Context, node string, site string) (string, error) {
+	// To reboot a host a "reboot-api" user is created, and the only way
 	// to authenticate is via a private key. Logging in with such user will
 	// automatically trigger a "systemctl reboot" command.
-	host := makeCoreOSHostname(node, site)
+	host := makeHostname(node, site)
 
 	// Connect to the host
 	connectionConfig := &connector.ConnectionConfig{
@@ -102,7 +102,7 @@ func (h *Handler) rebootCoreOS(ctx context.Context, node string, site string) (s
 		return "", err
 	}
 
-	metricCoreOSReboots.WithLabelValues(site, node).Inc()
+	metricHostReboots.WithLabelValues(site, node).Inc()
 	return "System reboot successful", nil
 }
 
@@ -184,7 +184,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var output string
 	var err error
 	if method == "host" {
-		output, err = h.rebootCoreOS(context.Background(), target[0], target[1])
+		output, err = h.rebootHost(context.Background(), target[0], target[1])
 	} else { // default method is DRAC
 		output, err = h.rebootDRAC(context.Background(), target[0], target[1])
 	}
@@ -221,6 +221,6 @@ func makeDRACHostname(node string, site string) string {
 	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
 }
 
-func makeCoreOSHostname(node string, site string) string {
+func makeHostname(node string, site string) string {
 	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
 }
