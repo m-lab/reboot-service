@@ -36,7 +36,7 @@ var (
 
 const (
 	defaultListenAddr = ":8080"
-	defaultPromPort   = ":8081"
+	defaultPromPort   = ":9600"
 	defaultProjID     = "mlab-sandbox"
 	defaultNamespace  = "reboot-api"
 	defaultSSHPort    = 22
