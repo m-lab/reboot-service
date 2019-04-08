@@ -80,7 +80,7 @@ func Test_sshConnector_NewConnection(t *testing.T) {
 		Username:       "testuser",
 		Password:       "testpass",
 		PrivateKeyFile: "",
-		ConnType:       DRACConnection,
+		ConnType:       BMCConnection,
 	}
 
 	_, err := connector.NewConnection(config)
@@ -115,7 +115,7 @@ func Test_sshConnection_Reboot(t *testing.T) {
 		Username:       "testuser",
 		Password:       "testpass",
 		PrivateKeyFile: "",
-		ConnType:       DRACConnection,
+		ConnType:       BMCConnection,
 	}
 
 	conn, err := connector.NewConnection(config)
@@ -161,7 +161,7 @@ func Test_sshConnection_Close(t *testing.T) {
 		Username:       "testuser",
 		Password:       "testpass",
 		PrivateKeyFile: "",
-		ConnType:       DRACConnection,
+		ConnType:       BMCConnection,
 	}
 
 	conn, err := connector.NewConnection(config)

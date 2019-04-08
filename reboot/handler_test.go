@@ -120,7 +120,7 @@ func TestServeHTTP(t *testing.T) {
 		config: &Config{
 			ProjectID:      "test",
 			PrivateKeyPath: "",
-			DRACPort:       806,
+			BMCPort:        806,
 			SSHPort:        22,
 			Namespace:      "test",
 		},

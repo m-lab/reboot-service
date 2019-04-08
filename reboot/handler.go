@@ -15,19 +15,19 @@ import (
 )
 
 var (
-	metricDRACReboots = promauto.NewCounterVec(
+	metricBMCReboots = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "reboot_drac_total",
-			Help: "Total number of successful DRAC reboots",
+			Name: "reboot_bmc_total",
+			Help: "Total number of successful BMC reboots",
 		},
 		[]string{
 			"site",
 			"machine",
 		},
 	)
-	metricDRACRebootTimeHist = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "reboot_drac_duration_seconds",
-		Help:    "Duration histogram for successful DRAC reboots, in seconds",
+	metricBMCRebootTimeHist = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "reboot_bmc_duration_seconds",
+		Help:    "Duration histogram for successful BMC reboots, in seconds",
 		Buckets: []float64{15, 30, 45, 60},
 	})
 	metricHostReboots = promauto.NewCounterVec(
@@ -47,8 +47,8 @@ type Config struct {
 	ProjectID string
 	Namespace string
 
-	SSHPort  int32
-	DRACPort int32
+	SSHPort int32
+	BMCPort int32
 
 	RebootUser     string
 	PrivateKeyPath string
@@ -106,15 +106,15 @@ func (h *Handler) rebootHost(ctx context.Context, node string, site string) (str
 	return "System reboot successful", nil
 }
 
-func (h *Handler) rebootDRAC(ctx context.Context, node string, site string) (string, error) {
-	// There are different ways a DRAC hostname can be provided:
+func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (string, error) {
+	// There are different ways a BMC hostname can be provided:
 	// - mlab1.lga0t
 	// - mlab1d.lga0t
 	// - mlab1.lga0t.measurement-lab.org
 	// - mlab1d.lga0t.measurement-lab.org
 	// To make sure this is handled in a flexible way, the site and host parts
 	// are provided separately and re-assembled here.
-	host := makeDRACHostname(node, site)
+	host := makeBMCHostname(node, site)
 
 	// Retrieve credentials from the credentials provider.
 	creds, err := h.credsProvider.FindCredentials(ctx, host)
@@ -128,9 +128,9 @@ func (h *Handler) rebootDRAC(ctx context.Context, node string, site string) (str
 		Hostname:       creds.Address,
 		Username:       creds.Username,
 		Password:       creds.Password,
-		Port:           h.config.DRACPort,
+		Port:           h.config.BMCPort,
 		PrivateKeyFile: h.config.PrivateKeyPath,
-		ConnType:       connector.DRACConnection,
+		ConnType:       connector.BMCConnection,
 	}
 
 	conn, err := h.connector.NewConnection(connectionConfig)
@@ -148,8 +148,8 @@ func (h *Handler) rebootDRAC(ctx context.Context, node string, site string) (str
 		return "", err
 	}
 
-	metricDRACReboots.WithLabelValues(site, node).Inc()
-	metricDRACRebootTimeHist.Observe(time.Since(start).Seconds())
+	metricBMCReboots.WithLabelValues(site, node).Inc()
+	metricBMCRebootTimeHist.Observe(time.Since(start).Seconds())
 	return output, nil
 }
 
@@ -169,9 +169,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Split hostname into site/node. If site and node cannot be extracted,
-	// we are reasonably sure this is not a valid M-Lab node's DRAC.
-	target := splitSiteNode(host)
-	if len(target) != 2 {
+	// we are reasonably sure this is not a valid M-Lab node's BMC.
+	node, site, err := parseNodeSite(host)
+	if err != nil {
 		errStr := fmt.Sprintf(
 			"The specified hostname is not a valid M-Lab node: %s", host)
 		w.WriteHeader(http.StatusBadRequest)
@@ -184,9 +184,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var output string
 	var err error
 	if method == "host" {
-		output, err = h.rebootHost(context.Background(), target[0], target[1])
+		output, err = h.rebootHost(context.Background(), node, site)
 	} else { // default method is DRAC
-		output, err = h.rebootDRAC(context.Background(), target[0], target[1])
+		output, err = h.rebootBMC(context.Background(), node, site)
 	}
 
 	if err != nil {
@@ -200,20 +200,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(output))
 }
 
-// splitSiteNode splits a hostname into a [site, node] slice
-func splitSiteNode(hostname string) []string {
+// parseNodeSite extracts node and site from a full hostname.
+func parseNodeSite(hostname string) (string, string, error) {
 	regex := regexp.MustCompile("(mlab[1-4]d?)\\.([a-zA-Z]{3}[0-9t]{2}).*")
 	result := regex.FindStringSubmatch(hostname)
 	if len(result) != 3 {
-		return nil
+		return "", "",
+			fmt.Errorf("The specified hostname is not a valid M-Lab node: %s", hostname)
 	}
 
-	return []string{result[1], result[2]}
+	return result[1], result[2], nil
 }
 
-// makeDRACHostname returns a full DRAC hostname made from the specified node
-// and site.
-func makeDRACHostname(node string, site string) string {
+// makeBMCHostname returns a full BMC hostname made from the specified node
+// and site (node + 'd' + site + "measurement-lab.org").
+func makeBMCHostname(node string, site string) string {
 	if node[len(node)-1] != 'd' {
 		node = node + "d"
 	}

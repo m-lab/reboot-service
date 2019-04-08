@@ -30,7 +30,7 @@ var (
 	keyPath    = flag.String("reboot.key", "", "SSH private key path")
 
 	sshPort  = flag.Int("reboot.sshport", defaultSSHPort, "SSH port to use")
-	dracPort = flag.Int("reboot.dracport", defaultDRACPort, "DRAC port to use")
+	bmcPort = flag.Int("reboot.bmcport", defaultDRACPort, "DRAC port to use")
 
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
@@ -38,11 +38,11 @@ var (
 
 const (
 	defaultListenAddr = ":8080"
-	defaultPromPort   = ":8081"
+	defaultPromPort   = ":9600"
 	defaultProjID     = "mlab-sandbox"
 	defaultNamespace  = "reboot-api"
 	defaultSSHPort    = 22
-	defaultDRACPort   = 806
+	defaultBMCPort    = 806
 	defaultRebootUser = "reboot-api"
 )
 
@@ -56,7 +56,7 @@ func createRebootConfig() *reboot.Config {
 		Namespace: *namespace,
 		ProjectID: *projectID,
 		SSHPort:   int32(*sshPort),
-		DRACPort:  int32(*dracPort),
+		BMCPort:  int32(*dracPort),
 
 		RebootUser:     *rebootUser,
 		PrivateKeyPath: *keyPath,
@@ -88,7 +88,8 @@ func main() {
 	defer s.Close()
 
 	// Initialize Prometheus server for monitoring.
-	prometheusx.MustStartPrometheus(*promAddr)
+	promServer := prometheusx.MustStartPrometheus(*promAddr)
+	defer promServer.Close()
 
 	// Keep serving until the context is canceled.
 	<-ctx.Done()
