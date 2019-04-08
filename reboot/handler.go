@@ -126,8 +126,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Split hostname into site/node. If site and node cannot be extracted,
 	// we are reasonably sure this is not a valid M-Lab node's BMC.
-	target := splitSiteNode(host)
-	if len(target) != 2 {
+	node, site, err := parseNodeSite(host)
+	if err != nil {
 		errStr := fmt.Sprintf(
 			"The specified hostname is not a valid M-Lab node: %s", host)
 		w.WriteHeader(http.StatusBadRequest)
@@ -136,7 +136,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := h.rebootBMC(context.Background(), target[0], target[1])
+	output, err := h.rebootBMC(context.Background(), node, site)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Reboot failed: %v", err)))
@@ -147,15 +147,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(output))
 }
 
-// splitSiteNode splits a hostname into a [site, node] slice
-func splitSiteNode(hostname string) []string {
+// parseNodeSite extracts node and site from a full hostname.
+func parseNodeSite(hostname string) (string, string, error) {
 	regex := regexp.MustCompile("(mlab[1-4]d?)\\.([a-zA-Z]{3}[0-9t]{2}).*")
 	result := regex.FindStringSubmatch(hostname)
 	if len(result) != 3 {
-		return nil
+		return "", "",
+			fmt.Errorf("The specified hostname is not a valid M-Lab node: %s", hostname)
 	}
 
-	return []string{result[1], result[2]}
+	return result[1], result[2], nil
 }
 
 // makeBMCHostname returns a full BMC hostname made from the specified node
