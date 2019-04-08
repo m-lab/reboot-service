@@ -28,7 +28,7 @@ var (
 	projectID = flag.String("project", defaultProjID, "GCD project ID")
 	namespace = flag.String("namespace", defaultNamespace, "GCD namespace")
 	sshPort   = flag.Int("sshport", defaultSSHPort, "SSH port to use")
-	dracPort  = flag.Int("dracport", defaultDRACPort, "DRAC port to use")
+	bmcPort   = flag.Int("bmcport", defaultBMCPort, "BMC port to use")
 
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
@@ -40,7 +40,7 @@ const (
 	defaultProjID     = "mlab-sandbox"
 	defaultNamespace  = "reboot-api"
 	defaultSSHPort    = 22
-	defaultDRACPort   = 806
+	defaultBMCPort    = 806
 )
 
 func init() {
@@ -53,7 +53,7 @@ func createRebootConfig() *reboot.Config {
 		Namespace: *namespace,
 		ProjectID: *projectID,
 		SSHPort:   int32(*sshPort),
-		DRACPort:  int32(*dracPort),
+		BMCPort:   int32(*bmcPort),
 	}
 }
 

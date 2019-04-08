@@ -1,6 +1,6 @@
 # reboot-service
 This reboot service allows to execute common operations on M-Lab platform's
-DRACs.
+BMC module (currently DRAC).
 
 It retrieves login credentials from Google Cloud Datastore.
 

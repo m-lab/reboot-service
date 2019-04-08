@@ -14,8 +14,8 @@ import (
 type ConnType int
 
 const (
-	// DRACConnection is an SSH connection to the node's DRAC
-	DRACConnection ConnType = 0
+	// BMCConnection is an SSH connection to the node's BMC
+	BMCConnection ConnType = 0
 	// HostConnection is an SSH connection to the node's OS
 	HostConnection ConnType = 1
 )
