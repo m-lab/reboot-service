@@ -182,7 +182,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	method := r.URL.Query().Get("method")
 	var output string
-	var err error
 	if method == "host" {
 		output, err = h.rebootHost(context.Background(), node, site)
 	} else { // default method is DRAC

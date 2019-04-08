@@ -29,8 +29,8 @@ var (
 	rebootUser = flag.String("reboot.user", defaultRebootUser, "User for rebooting CoreOS hosts")
 	keyPath    = flag.String("reboot.key", "", "SSH private key path")
 
-	sshPort  = flag.Int("reboot.sshport", defaultSSHPort, "SSH port to use")
-	bmcPort = flag.Int("reboot.bmcport", defaultDRACPort, "DRAC port to use")
+	sshPort = flag.Int("reboot.sshport", defaultSSHPort, "SSH port to use")
+	bmcPort = flag.Int("reboot.bmcport", defaultBMCPort, "DRAC port to use")
 
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
@@ -56,7 +56,7 @@ func createRebootConfig() *reboot.Config {
 		Namespace: *namespace,
 		ProjectID: *projectID,
 		SSHPort:   int32(*sshPort),
-		BMCPort:  int32(*dracPort),
+		BMCPort:   int32(*bmcPort),
 
 		RebootUser:     *rebootUser,
 		PrivateKeyPath: *keyPath,
