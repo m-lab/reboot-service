@@ -23,6 +23,7 @@ var (
 		[]string{
 			"site",
 			"machine",
+			"status",
 		},
 	)
 	metricBMCRebootTimeHist = promauto.NewHistogram(prometheus.HistogramOpts{
@@ -38,6 +39,7 @@ var (
 		[]string{
 			"site",
 			"machine",
+			"status",
 		},
 	)
 )
@@ -90,16 +92,18 @@ func (h *Handler) rebootHost(ctx context.Context, node string, site string) (str
 		log.WithError(err).
 			Errorf("Cannot connect to host: %s:%d with username %s",
 				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
+		metricHostReboots.WithLabelValues(site, node, "error-connect").Inc()
 		return "", err
 	}
 
 	_, err = conn.Reboot()
 	if err != nil {
 		log.WithError(err).Errorf("Cannot issue reboot command (type: %v)", connectionConfig.ConnType)
+		metricHostReboots.WithLabelValues(site, node, "error-reboot").Inc()
 		return "", err
 	}
 
-	metricHostReboots.WithLabelValues(site, node).Inc()
+	metricHostReboots.WithLabelValues(site, node, "ok").Inc()
 	return "System reboot successful", nil
 }
 
@@ -135,6 +139,7 @@ func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (stri
 		log.WithError(err).
 			Errorf("Cannot connect to DRAC: %s:%d with username %s",
 				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
+		metricBMCReboots.WithLabelValues(site, node, "error-connect").Inc()
 		return "", err
 	}
 
@@ -142,10 +147,11 @@ func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (stri
 	output, err := conn.Reboot()
 	if err != nil {
 		log.WithError(err).Errorf("Cannot issue reboot command")
+		metricBMCReboots.WithLabelValues(site, node, "error-reboot").Inc()
 		return "", err
 	}
 
-	metricBMCReboots.WithLabelValues(site, node).Inc()
+	metricBMCReboots.WithLabelValues(site, node, "ok").Inc()
 	metricBMCRebootTimeHist.Observe(time.Since(start).Seconds())
 	return output, nil
 }
