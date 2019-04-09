@@ -80,6 +80,10 @@ func TestServeHTTP(t *testing.T) {
 			body:   "Server power operation successful",
 		},
 		{
+			req:    httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t&method=host", nil),
+			status: http.StatusOK,
+		},
+		{
 			req:    httptest.NewRequest("GET", "/v1/reboot?host=mlab1.lga0t", nil),
 			status: http.StatusMethodNotAllowed,
 			body:   "",
@@ -103,6 +107,18 @@ func TestServeHTTP(t *testing.T) {
 		},
 		{
 			req:                httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
+			connectionMustFail: true,
+			status:             http.StatusInternalServerError,
+			body:               "",
+		},
+		{
+			req:               httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t&method=host", nil),
+			connectorMustFail: true,
+			status:            http.StatusInternalServerError,
+			body:              "",
+		},
+		{
+			req:                httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t&method=host", nil),
 			connectionMustFail: true,
 			status:             http.StatusInternalServerError,
 			body:               "",
