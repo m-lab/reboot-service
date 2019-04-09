@@ -77,6 +77,7 @@ func main() {
 	rebootHandler := reboot.NewHandler(rebootConfig, credentials, connector)
 
 	// Initialize HTTP server.
+	// TODO(roberto): add promhttp instruments for handlers.
 	rebootMux := http.NewServeMux()
 	rebootMux.Handle("/v1/reboot", rebootHandler)
 
