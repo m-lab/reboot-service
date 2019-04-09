@@ -22,8 +22,6 @@ import (
 var (
 	// Command line flags.
 	listenAddr = flag.String("listenaddr", defaultListenAddr, "Address to listen on")
-	promAddr   = flag.String("promaddr", defaultPromPort,
-		"Address to listen on for Prometheus metrics")
 	projectID  = flag.String("datastore.project", defaultProjID, "GCD project ID")
 	namespace  = flag.String("datastore.namespace", defaultNamespace, "GCD namespace")
 	rebootUser = flag.String("reboot.user", defaultRebootUser, "User for rebooting CoreOS hosts")
@@ -89,7 +87,7 @@ func main() {
 	defer s.Close()
 
 	// Initialize Prometheus server for monitoring.
-	promServer := prometheusx.MustStartPrometheus(*promAddr)
+	promServer := prometheusx.MustServeMetrics()
 	defer promServer.Close()
 
 	// Keep serving until the context is canceled.
