@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -126,13 +127,31 @@ func (c *sshConnection) exec(cmd string) (string, error) {
 	return string(output), err
 }
 
+// Reboot reboots the node via this Connection. The method to perform the
+// reboot is chosen depending on sshConnection.ConnType.
 func (c *sshConnection) Reboot() (string, error) {
-	output, err := c.exec("racadm serveraction powercycle")
-	if err != nil {
-		log.Printf("Error executing reboot command: %v", err)
-		return "", err
+	var output string
+	var err error
+
+	if c.config.ConnType == HostConnection {
+		// To reboot a host a "reboot-api" user is created, and the only way
+		// to authenticate is via a private key. Logging in with such user will
+		// automatically trigger a "systemctl reboot" command.
+		// To actually start an SSH session (and thus trigger a reboot) a
+		// command must be executed.
+		output, err = c.exec("")
+		if err != nil {
+			return "", err
+		}
+	} else if c.config.ConnType == BMCConnection {
+		output, err = c.exec("racadm serveraction powercycle")
+		if err != nil {
+			return "", err
+		}
+	} else {
+		return "", errors.New("unable to reboot: unspecified connection")
 	}
-	return output, err
+	return output, nil
 }
 
 func (c *sshConnection) Close() error {

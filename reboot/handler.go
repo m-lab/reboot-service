@@ -23,6 +23,7 @@ var (
 		[]string{
 			"site",
 			"machine",
+			"status",
 		},
 	)
 	metricBMCRebootTimeHist = promauto.NewHistogram(prometheus.HistogramOpts{
@@ -30,6 +31,17 @@ var (
 		Help:    "Duration histogram for successful BMC reboots, in seconds",
 		Buckets: []float64{15, 30, 45, 60},
 	})
+	metricHostReboots = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "reboot_host_total",
+			Help: "Total number of successful host reboots",
+		},
+		[]string{
+			"site",
+			"machine",
+			"status",
+		},
+	)
 )
 
 // Config holds the configuration for the reboot handler
@@ -40,6 +52,7 @@ type Config struct {
 	SSHPort int32
 	BMCPort int32
 
+	RebootUser     string
 	PrivateKeyPath string
 }
 
@@ -60,6 +73,38 @@ type Handler struct {
 
 	credsProvider creds.Provider
 	connector     connector.Connector
+}
+
+func (h *Handler) rebootHost(ctx context.Context, node string, site string) (string, error) {
+	host := makeHostname(node, site)
+
+	// Connect to the host
+	connectionConfig := &connector.ConnectionConfig{
+		Hostname:       host,
+		Username:       h.config.RebootUser,
+		Port:           h.config.SSHPort,
+		PrivateKeyFile: h.config.PrivateKeyPath,
+		ConnType:       connector.HostConnection,
+	}
+
+	conn, err := h.connector.NewConnection(connectionConfig)
+	if err != nil {
+		log.WithError(err).
+			Errorf("Cannot connect to host: %s:%d with username %s",
+				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
+		metricHostReboots.WithLabelValues(site, node, "error-connect").Inc()
+		return "", err
+	}
+
+	_, err = conn.Reboot()
+	if err != nil {
+		log.WithError(err).Errorf("Cannot issue reboot command (type: %v)", connectionConfig.ConnType)
+		metricHostReboots.WithLabelValues(site, node, "error-reboot").Inc()
+		return "", err
+	}
+
+	metricHostReboots.WithLabelValues(site, node, "ok").Inc()
+	return "System reboot successful", nil
 }
 
 func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (string, error) {
@@ -92,8 +137,9 @@ func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (stri
 	conn, err := h.connector.NewConnection(connectionConfig)
 	if err != nil {
 		log.WithError(err).
-			Errorf("Cannot connect to host: %s:%d with username %s",
+			Errorf("Cannot connect to DRAC: %s:%d with username %s",
 				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
+		metricBMCReboots.WithLabelValues(site, node, "error-connect").Inc()
 		return "", err
 	}
 
@@ -101,10 +147,11 @@ func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (stri
 	output, err := conn.Reboot()
 	if err != nil {
 		log.WithError(err).Errorf("Cannot issue reboot command")
+		metricBMCReboots.WithLabelValues(site, node, "error-reboot").Inc()
 		return "", err
 	}
 
-	metricBMCReboots.WithLabelValues(site, node).Inc()
+	metricBMCReboots.WithLabelValues(site, node, "ok").Inc()
 	metricBMCRebootTimeHist.Observe(time.Since(start).Seconds())
 	return output, nil
 }
@@ -136,14 +183,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := h.rebootBMC(context.Background(), node, site)
+	method := r.URL.Query().Get("method")
+	var output string
+	if method == "host" {
+		output, err = h.rebootHost(context.Background(), node, site)
+	} else { // default method is DRAC
+		output, err = h.rebootBMC(context.Background(), node, site)
+	}
+
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Reboot failed: %v", err)))
-		log.WithError(err).Warn("Reboot failed")
+		log.WithError(err).Error("Reboot failed")
 		return
 	}
 
+	log.WithField("output", output).Infof("%v rebooted successfully.", host)
 	w.Write([]byte(output))
 }
 
@@ -166,5 +221,9 @@ func makeBMCHostname(node string, site string) string {
 		node = node + "d"
 	}
 
+	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
+}
+
+func makeHostname(node string, site string) string {
 	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
 }

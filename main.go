@@ -7,6 +7,7 @@ import (
 	"flag"
 	"net/http"
 
+	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
 
 	"github.com/m-lab/reboot-service/creds"
@@ -16,19 +17,18 @@ import (
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/reboot-service/reboot"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (
 	// Command line flags.
 	listenAddr = flag.String("listenaddr", defaultListenAddr, "Address to listen on")
-	promAddr   = flag.String("promaddr", defaultPromPort,
-		"Address to listen on for Prometheus metrics")
-	projectID = flag.String("project", defaultProjID, "GCD project ID")
-	namespace = flag.String("namespace", defaultNamespace, "GCD namespace")
-	sshPort   = flag.Int("sshport", defaultSSHPort, "SSH port to use")
-	bmcPort   = flag.Int("bmcport", defaultBMCPort, "BMC port to use")
+	projectID  = flag.String("datastore.project", defaultProjID, "GCD project ID")
+	namespace  = flag.String("datastore.namespace", defaultNamespace, "GCD namespace")
+	rebootUser = flag.String("reboot.user", defaultRebootUser, "User for rebooting CoreOS hosts")
+	keyPath    = flag.String("reboot.key", "", "SSH private key path")
+
+	sshPort = flag.Int("reboot.sshport", defaultSSHPort, "SSH port to use")
+	bmcPort = flag.Int("reboot.bmcport", defaultBMCPort, "DRAC port to use")
 
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
@@ -41,10 +41,11 @@ const (
 	defaultNamespace  = "reboot-api"
 	defaultSSHPort    = 22
 	defaultBMCPort    = 806
+	defaultRebootUser = "reboot-api"
 )
 
 func init() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 }
 
 func createRebootConfig() *reboot.Config {
@@ -54,6 +55,9 @@ func createRebootConfig() *reboot.Config {
 		ProjectID: *projectID,
 		SSHPort:   int32(*sshPort),
 		BMCPort:   int32(*bmcPort),
+
+		RebootUser:     *rebootUser,
+		PrivateKeyPath: *keyPath,
 	}
 }
 
@@ -71,6 +75,7 @@ func main() {
 	rebootHandler := reboot.NewHandler(rebootConfig, credentials, connector)
 
 	// Initialize HTTP server.
+	// TODO(roberto): add promhttp instruments for handlers.
 	rebootMux := http.NewServeMux()
 	rebootMux.Handle("/v1/reboot", rebootHandler)
 
@@ -82,7 +87,7 @@ func main() {
 	defer s.Close()
 
 	// Initialize Prometheus server for monitoring.
-	promServer := prometheusx.MustStartPrometheus(*promAddr)
+	promServer := prometheusx.MustServeMetrics()
 	defer promServer.Close()
 
 	// Keep serving until the context is canceled.
