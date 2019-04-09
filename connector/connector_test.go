@@ -65,6 +65,9 @@ var (
 	ms = &mockSession{
 		messages: map[string]string{
 			"racadm serveraction powercycle": "Server power operation successful",
+
+			// empty command -> empty response allows to test HostConnection.
+			"": "",
 		},
 	}
 )
@@ -118,13 +121,27 @@ func Test_sshConnection_Reboot(t *testing.T) {
 		ConnType:       BMCConnection,
 	}
 
-	conn, err := connector.NewConnection(config)
+	bmcConn, err := connector.NewConnection(config)
+	if err != nil {
+		t.Errorf("NewConnection() - unexpected error: %v", err)
+	}
+
+	hostConfig := &ConnectionConfig{
+		Hostname:       "testhost",
+		Port:           22,
+		Username:       "testuser",
+		Password:       "testpass",
+		PrivateKeyFile: "",
+		ConnType:       HostConnection,
+	}
+
+	hostConn, err := connector.NewConnection(hostConfig)
 	if err != nil {
 		t.Errorf("NewConnection() - unexpected error: %v", err)
 	}
 
 	// Reboot() should return a known output.
-	output, err := conn.Reboot()
+	output, err := bmcConn.Reboot()
 	if err != nil {
 		t.Errorf("Reboot() unexpected error: %v", err)
 	}
@@ -135,7 +152,7 @@ func Test_sshConnection_Reboot(t *testing.T) {
 	// Reboot() should fail if the command execution fails.
 	messages := ms.messages
 	ms.messages = make(map[string]string)
-	output, err = conn.Reboot()
+	output, err = bmcConn.Reboot()
 	if err == nil {
 		t.Errorf("Reboot() expected error, got nil.")
 	}
@@ -143,7 +160,31 @@ func Test_sshConnection_Reboot(t *testing.T) {
 
 	// Reboot() should fail if a session can't be created.
 	mc.mustFail = true
-	output, err = conn.Reboot()
+	output, err = bmcConn.Reboot()
+	if err == nil {
+		t.Errorf("Reboot() expected error, got nil.")
+	}
+	mc.mustFail = false
+
+	// Tests for HostConnection
+	// Reboot() should return a known output.
+	output, err = hostConn.Reboot()
+	if err != nil {
+		t.Errorf("Reboot() unexpected error: %v", err)
+	}
+
+	// Reboot() should fail if the command execution fails.
+	messages = ms.messages
+	ms.messages = make(map[string]string)
+	output, err = hostConn.Reboot()
+	if err == nil {
+		t.Errorf("Reboot() expected error, got nil.")
+	}
+	ms.messages = messages
+
+	// Reboot() should fail if a session can't be created.
+	mc.mustFail = true
+	output, err = hostConn.Reboot()
 	if err == nil {
 		t.Errorf("Reboot() expected error, got nil.")
 	}
