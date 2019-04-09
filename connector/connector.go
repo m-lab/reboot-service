@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -139,11 +140,13 @@ func (c *sshConnection) Reboot() (string, error) {
 		if err != nil {
 			return "", err
 		}
-	} else { // reboot via DRAC (default)
+	} else if c.config.ConnType == BMCConnection {
 		output, err = c.exec("racadm serveraction powercycle")
 		if err != nil {
 			return "", err
 		}
+	} else {
+		return "", errors.New("unable to reboot: unspecified connection")
 	}
 	return output, nil
 }
