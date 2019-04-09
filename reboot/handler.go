@@ -74,9 +74,6 @@ type Handler struct {
 }
 
 func (h *Handler) rebootHost(ctx context.Context, node string, site string) (string, error) {
-	// To reboot a host a "reboot-api" user is created, and the only way
-	// to authenticate is via a private key. Logging in with such user will
-	// automatically trigger a "systemctl reboot" command.
 	host := makeHostname(node, site)
 
 	// Connect to the host

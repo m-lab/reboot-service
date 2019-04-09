@@ -134,6 +134,9 @@ func (c *sshConnection) Reboot() (string, error) {
 	var err error
 
 	if c.config.ConnType == HostConnection {
+		// To reboot a host a "reboot-api" user is created, and the only way
+		// to authenticate is via a private key. Logging in with such user will
+		// automatically trigger a "systemctl reboot" command.
 		// To actually start an SSH session (and thus trigger a reboot) a
 		// command must be executed.
 		output, err = c.exec("")
