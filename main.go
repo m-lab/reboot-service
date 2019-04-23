@@ -7,6 +7,8 @@ import (
 	"flag"
 	"net/http"
 
+	"github.com/goji/httpauth"
+
 	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
 
@@ -29,6 +31,9 @@ var (
 
 	sshPort = flag.Int("reboot.sshport", defaultSSHPort, "SSH port to use")
 	bmcPort = flag.Int("reboot.bmcport", defaultBMCPort, "DRAC port to use")
+
+	username = flag.String("auth.username", "", "Username for HTTP basic auth")
+	password = flag.String("auth.password", "", "Password for HTTP basic auth")
 
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
@@ -72,10 +77,24 @@ func main() {
 	credentials := creds.NewProvider(*projectID, *namespace)
 	connector := connector.NewConnector()
 
-	rebootHandler := reboot.NewHandler(rebootConfig, credentials, connector)
+	var rebootHandler http.Handler
+	rebootHandler = reboot.NewHandler(rebootConfig, credentials, connector)
 
 	// Initialize HTTP server.
 	// TODO(roberto): add promhttp instruments for handlers.
+	if *username != "" && *password != "" {
+		authOpts := httpauth.AuthOptions{
+			Realm:    "reboot-api",
+			User:     *username,
+			Password: *password,
+		}
+		rebootHandler = httpauth.BasicAuth(authOpts)(rebootHandler)
+	} else {
+		log.Warn("Username and password have not been specified!")
+		log.Warn("Make sure you add -auth.username and -auth.password before " +
+			"running in production.")
+	}
+
 	rebootMux := http.NewServeMux()
 	rebootMux.Handle("/v1/reboot", rebootHandler)
 
