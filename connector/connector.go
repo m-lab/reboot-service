@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -21,7 +22,8 @@ const (
 	// BMCConnection is an SSH connection to the node's BMC
 	BMCConnection ConnType = 1
 	// HostConnection is an SSH connection to the node's OS
-	HostConnection ConnType = 2
+	HostConnection    ConnType = 2
+	connectionTimeout          = 60 * time.Second
 )
 
 // ConnectionConfig holds the configuration for a Connection
@@ -77,6 +79,7 @@ func (s *sshConnector) NewConnection(config *ConnectionConfig) (Connection, erro
 		User:            config.Username,
 		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         connectionTimeout,
 	}
 
 	cl, err := s.dialer.Dial("tcp",
