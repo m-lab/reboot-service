@@ -4,10 +4,12 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"net/http"
 
 	"github.com/goji/httpauth"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
@@ -35,6 +37,11 @@ var (
 	username = flag.String("auth.username", "", "Username for HTTP basic auth")
 	password = flag.String("auth.password", "", "Password for HTTP basic auth")
 
+	tlsHost = flag.String("tls.host", "",
+		"Enable TLS and get LetsEncrypt certificate for this hostname")
+	tlsCertsDir = flag.String("tls.certs-dir", defaultCertsDir,
+		"Folder where to cache TLS certificates")
+
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
 )
@@ -47,6 +54,7 @@ const (
 	defaultSSHPort    = 22
 	defaultBMCPort    = 806
 	defaultRebootUser = "reboot-api"
+	defaultCertsDir   = "/var/tls/"
 )
 
 func init() {
@@ -63,6 +71,13 @@ func createRebootConfig() *reboot.Config {
 
 		RebootUser:     *rebootUser,
 		PrivateKeyPath: *keyPath,
+	}
+}
+
+func makeHTTPServer(h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:    *listenAddr,
+		Handler: h,
 	}
 }
 
@@ -98,11 +113,27 @@ func main() {
 	rebootMux := http.NewServeMux()
 	rebootMux.Handle("/v1/reboot", rebootHandler)
 
-	s := &http.Server{
-		Addr:    *listenAddr,
-		Handler: rebootMux,
+	s := makeHTTPServer(rebootMux)
+	// Setup TLS and autocert
+	if *tlsHost != "" {
+		// Set up autocert to automatically accept LetsEncrypt's TOS and to
+		// only request certificates for the specified hostname.
+		// See:
+		// https://godoc.org/golang.org/x/crypto/acme/autocert#Manager
+		m := &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(*tlsHost),
+			Cache:      autocert.DirCache(*tlsCertsDir),
+		}
+
+		s.TLSConfig = &tls.Config{GetCertificate: m.GetCertificate}
+
+		// Certificate and key file don't need to be specified as they will
+		// be generated or retrieved from the cache by autocert.
+		rtx.Must(httpx.ListenAndServeTLSAsync(s, "", ""), "Could not start HTTPS server")
+	} else {
+		rtx.Must(httpx.ListenAndServeAsync(s), "Could not start HTTP server")
 	}
-	rtx.Must(httpx.ListenAndServeAsync(s), "Could not start HTTP server")
 	defer s.Close()
 
 	// Initialize Prometheus server for monitoring.
