@@ -131,6 +131,7 @@ func main() {
 		// We also need a HTTP server listening on port 80 so that LetsEncrypt
 		// can authorize us.
 		httpServer := &http.Server{
+			Addr:    ":80",
 			Handler: m.HTTPHandler(nil),
 		}
 		rtx.Must(httpx.ListenAndServeAsync(httpServer), "Could not start HTTP server")
