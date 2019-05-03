@@ -139,9 +139,6 @@ func main() {
 		// Certificate and key file don't need to be specified as they will
 		// be generated or retrieved from the cache by autocert.
 		rtx.Must(httpx.ListenAndServeTLSAsync(s, "", ""), "Could not start HTTPS server")
-
-		// We also need a HTTP server on port 80 so that LetsEncrypt can
-		// authorize
 	} else {
 		rtx.Must(httpx.ListenAndServeAsync(s), "Could not start HTTP server")
 	}
