@@ -9,6 +9,7 @@ RUN go get \
 
 # Now copy the built image into the minimal base image
 FROM alpine:3.7
+RUN apk add ca-certificates
 COPY --from=build /go/bin/reboot-service /
 WORKDIR /
 ENTRYPOINT ["/reboot-service"]
