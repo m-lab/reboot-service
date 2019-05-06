@@ -128,8 +128,9 @@ func main() {
 
 		s.TLSConfig = &tls.Config{GetCertificate: m.GetCertificate}
 
-		// We also need a HTTP server listening on port 80 so that LetsEncrypt
-		// can authorize us.
+		// This HTTP server will listen for incoming http-01 challenges from
+		// LetsEncrypt. The only ports LetsEncrypt will send challenges to are
+		// 80 and 443, and this is not configurable.
 		httpServer := &http.Server{
 			Addr:    ":80",
 			Handler: m.HTTPHandler(nil),
