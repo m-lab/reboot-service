@@ -14,11 +14,11 @@ const kind = "Credentials"
 // plus some additional metadata such as the IP address and the model (DRAC
 // or otherwise).
 type Credentials struct {
-	Hostname string `datastore:"hostname"`
-	Username string `datastore:"username"`
-	Password string `datastore:"password"`
-	Model    string `datastore:"model"`
-	Address  string `datastore:"address"`
+	Hostname string `datastore:"hostname" json:"hostname"`
+	Username string `datastore:"username" json:"username"`
+	Password string `datastore:"password" json:"password"`
+	Model    string `datastore:"model" json:"model"`
+	Address  string `datastore:"address" json:"address"`
 }
 
 // Provider is a Credentials provider.
