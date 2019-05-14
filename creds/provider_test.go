@@ -47,12 +47,8 @@ func (d *mockClient) GetAll(ctx context.Context, q *datastore.Query,
 }
 
 func isFakeProvider(t interface{}) bool {
-	switch t.(type) {
-	case FakeProvider:
-		return true
-	default:
-		return false
-	}
+	_, ok := t.(*FakeProvider)
+	return ok
 }
 func TestNewProvider(t *testing.T) {
 	provider := NewProvider("projectID", "ns")
@@ -61,7 +57,7 @@ func TestNewProvider(t *testing.T) {
 	}
 
 	provider = NewProvider("fake", "fake")
-	if provider == nil || isFakeProvider(provider) {
+	if !isFakeProvider(provider) {
 		t.Errorf("NewProvider() didn't return a FakeProvider.")
 	}
 }
