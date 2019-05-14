@@ -34,8 +34,35 @@ type datastoreProvider struct {
 	connector connector
 }
 
+// FakeProvider is a fake provider to use for testing. It holds a map of
+// hostname -> *Credentials that can be populated as needed when testing.
+type FakeProvider struct {
+	creds map[string]*Credentials
+}
+
+// FindCredentials returns a Credentials from the creds map or an error.
+func (p *FakeProvider) FindCredentials(ctx context.Context,
+	host string) (*Credentials, error) {
+	if cred, ok := p.creds[host]; ok {
+		return cred, nil
+	}
+
+	return nil, errors.New("hostname not found")
+}
+
+// AddCredentials adds a Credentials to the map.
+func (p *FakeProvider) AddCredentials(host string, cred *Credentials) {
+	p.creds[host] = cred
+}
+
 // NewProvider returns a Provider based on the default implementation (GCD).
+// If the projectID and namespace are both "fake", it returns a fake
+// implementation that's useful for testing.
 func NewProvider(projectID, namespace string) Provider {
+	if projectID == "fake" && namespace == "fake" {
+		return &FakeProvider{}
+	}
+
 	return &datastoreProvider{
 		projectID: projectID,
 		namespace: namespace,
