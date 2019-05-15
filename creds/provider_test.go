@@ -3,7 +3,6 @@ package creds
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
 	"cloud.google.com/go/datastore"
@@ -46,19 +45,10 @@ func (d *mockClient) GetAll(ctx context.Context, q *datastore.Query,
 	return nil, nil
 }
 
-func isFakeProvider(t interface{}) bool {
-	_, ok := t.(*FakeProvider)
-	return ok
-}
 func TestNewProvider(t *testing.T) {
 	provider := NewProvider("projectID", "ns")
 	if provider == nil {
 		t.Errorf("NewProvider() returned nil.")
-	}
-
-	provider = NewProvider("fake", "fake")
-	if !isFakeProvider(provider) {
-		t.Errorf("NewProvider() didn't return a FakeProvider.")
 	}
 }
 
@@ -120,91 +110,4 @@ func TestFindCredentials(t *testing.T) {
 	}
 	mc.skipAppend = false
 
-}
-
-func Test_datastoreProvider_FindCredentials(t *testing.T) {
-	type fields struct {
-		projectID string
-		namespace string
-		connector connector
-	}
-	type args struct {
-		ctx  context.Context
-		host string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *Credentials
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := &datastoreProvider{
-				projectID: tt.fields.projectID,
-				namespace: tt.fields.namespace,
-				connector: tt.fields.connector,
-			}
-			got, err := d.FindCredentials(tt.args.ctx, tt.args.host)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("datastoreProvider.FindCredentials() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("datastoreProvider.FindCredentials() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-// Test the FakeProvider implementation.
-func TestFakeProvider_AddCredentials(t *testing.T) {
-	// Create a FakeProvider and add a Credentials to the map.
-	provider := &FakeProvider{
-		creds: map[string]*Credentials{},
-	}
-
-	fakeDrac := &Credentials{
-		Hostname: "host",
-		Username: "user",
-		Password: "pass",
-		Model:    "model",
-		Address:  "address",
-	}
-
-	provider.AddCredentials("test", fakeDrac)
-	if creds, ok := provider.creds["test"]; !ok || creds != fakeDrac {
-		t.Errorf("AddCredentials() didn't add the expected Credentials.")
-	}
-}
-
-func TestFakeProvider_FindCredentials(t *testing.T) {
-	fakeDrac := &Credentials{
-		Hostname: "host",
-		Username: "user",
-		Password: "pass",
-		Model:    "model",
-		Address:  "address",
-	}
-
-	provider := &FakeProvider{
-		creds: map[string]*Credentials{
-			"test": fakeDrac,
-		},
-	}
-
-	// Retrieve previously added Credentials from the FakeProvider's map.
-	creds, err := provider.FindCredentials(context.Background(), "test")
-	if err != nil || creds != fakeDrac {
-		t.Errorf("FindCredentials() returned an error or wrong Credentials.")
-	}
-
-	// Attempt to retrieve Credentials for an unknown hostname.
-	creds, err = provider.FindCredentials(context.Background(), "fail")
-	if err == nil || creds != nil {
-		t.Errorf("FindCredentials() didn't return an error.")
-	}
 }
