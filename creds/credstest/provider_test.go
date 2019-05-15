@@ -55,3 +55,10 @@ func TestFakeProvider_FindCredentials(t *testing.T) {
 		t.Errorf("FindCredentials() didn't return an error.")
 	}
 }
+
+func TestNewProvider(t *testing.T) {
+	prov := NewProvider()
+	if prov == nil {
+		t.Errorf("NewProvider() returned nil.")
+	}
+}
