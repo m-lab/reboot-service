@@ -91,6 +91,7 @@ func (d *datastoreProvider) AddCredentials(ctx context.Context,
 	_, err = client.Put(ctx, key, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Cannot add Credentials entity")
+		return err
 	}
 	return nil
 }
