@@ -44,24 +44,6 @@ func (connection *mockConnection) Close() error {
 	return nil
 }
 
-// Mock struct for credentials Provider
-// type mockProvider struct {
-// 	mustFail bool
-// }
-
-// func (p *mockProvider) FindCredentials(context.Context, string) (*creds.Credentials, error) {
-// 	if p.mustFail {
-// 		return nil, errors.New("method FindCredentials() failed")
-// 	}
-// 	return &creds.Credentials{
-// 		Hostname: "testhost",
-// 		Username: "testuser",
-// 		Password: "testpass",
-// 		Model:    "drac",
-// 		Address:  "testaddr",
-// 	}, nil
-// }
-
 func TestServeHTTP(t *testing.T) {
 	type fields struct {
 		status int
