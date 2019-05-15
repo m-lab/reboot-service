@@ -5,9 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"google.golang.org/api/option"
-
 	"cloud.google.com/go/datastore"
+	"google.golang.org/api/option"
 )
 
 type mockConnector struct {
