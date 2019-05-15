@@ -45,6 +45,11 @@ func (d *mockClient) GetAll(ctx context.Context, q *datastore.Query,
 	return nil, nil
 }
 
+func (d *mockClient) Put(context.Context, *datastore.Key,
+	interface{}) (*datastore.Key, error) {
+	return nil, errors.New("not implemented")
+}
+
 func TestNewProvider(t *testing.T) {
 	provider := NewProvider("projectID", "ns")
 	if provider == nil {

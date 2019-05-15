@@ -9,13 +9,16 @@ import (
 
 // FakeProvider is a fake provider to use for testing. It holds a map of
 // hostname -> *Credentials that can be populated as needed when testing.
+// It can be set up to fail by changing its MustFail field.
 type FakeProvider struct {
 	creds map[string]*creds.Credentials
 }
 
 // NewProvider returns a FakeProvider.
 func NewProvider() *FakeProvider {
-	return &FakeProvider{}
+	return &FakeProvider{
+		creds: make(map[string]*creds.Credentials),
+	}
 }
 
 // FindCredentials returns a Credentials from the creds map or an error.

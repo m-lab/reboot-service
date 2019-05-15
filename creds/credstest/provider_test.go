@@ -22,7 +22,7 @@ func TestFakeProvider_AddCredentials(t *testing.T) {
 		Address:  "address",
 	}
 
-	provider.AddCredentials("test", fakeDrac)
+	provider.AddCredentials(context.Background(), "test", fakeDrac)
 	if creds, ok := provider.creds["test"]; !ok || creds != fakeDrac {
 		t.Errorf("AddCredentials() didn't add the expected Credentials.")
 	}

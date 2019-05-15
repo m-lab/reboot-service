@@ -8,8 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/m-lab/reboot-service/connector"
 	"github.com/m-lab/reboot-service/creds"
+	"github.com/m-lab/reboot-service/creds/credstest"
+
+	"github.com/m-lab/reboot-service/connector"
 )
 
 // Mock structs for Connector and Connection interfaces.
@@ -43,22 +45,22 @@ func (connection *mockConnection) Close() error {
 }
 
 // Mock struct for credentials Provider
-type mockProvider struct {
-	mustFail bool
-}
+// type mockProvider struct {
+// 	mustFail bool
+// }
 
-func (p *mockProvider) FindCredentials(context.Context, string) (*creds.Credentials, error) {
-	if p.mustFail {
-		return nil, errors.New("method FindCredentials() failed")
-	}
-	return &creds.Credentials{
-		Hostname: "testhost",
-		Username: "testuser",
-		Password: "testpass",
-		Model:    "drac",
-		Address:  "testaddr",
-	}, nil
-}
+// func (p *mockProvider) FindCredentials(context.Context, string) (*creds.Credentials, error) {
+// 	if p.mustFail {
+// 		return nil, errors.New("method FindCredentials() failed")
+// 	}
+// 	return &creds.Credentials{
+// 		Hostname: "testhost",
+// 		Username: "testuser",
+// 		Password: "testpass",
+// 		Model:    "drac",
+// 		Address:  "testaddr",
+// 	}, nil
+// }
 
 func TestServeHTTP(t *testing.T) {
 	type fields struct {
@@ -70,7 +72,6 @@ func TestServeHTTP(t *testing.T) {
 		req                *http.Request
 		status             int
 		body               string
-		credsMustFail      bool
 		connectorMustFail  bool
 		connectionMustFail bool
 	}{
@@ -94,10 +95,9 @@ func TestServeHTTP(t *testing.T) {
 			body:   "",
 		},
 		{
-			req:           httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
-			credsMustFail: true,
-			status:        http.StatusInternalServerError,
-			body:          "",
+			req:    httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga1t", nil),
+			status: http.StatusInternalServerError,
+			body:   "",
 		},
 		{
 			req:               httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
@@ -131,7 +131,18 @@ func TestServeHTTP(t *testing.T) {
 	}
 
 	connector := &mockConnector{}
-	creds := &mockProvider{}
+
+	// Create a FakeProvider and populate it with fake Credentials.
+	provider := credstest.NewProvider()
+	provider.AddCredentials(context.Background(),
+		"mlab1d.lga0t.measurement-lab.org", &creds.Credentials{
+			Hostname: "mlab1.lga0t",
+			Username: "testuser",
+			Password: "testpass",
+			Model:    "drac",
+			Address:  "testaddr",
+		})
+
 	h := &Handler{
 		config: &Config{
 			ProjectID:      "test",
@@ -141,19 +152,17 @@ func TestServeHTTP(t *testing.T) {
 			Namespace:      "test",
 		},
 		connector:     connector,
-		credsProvider: creds,
+		credsProvider: provider,
 	}
 
 	for _, test := range tests {
 		rr := httptest.NewRecorder()
 
-		creds.mustFail = test.credsMustFail
 		connector.mustFail = test.connectorMustFail
 		connector.connMustFail = test.connectionMustFail
 
 		h.ServeHTTP(rr, test.req)
 
-		creds.mustFail = false
 		connector.mustFail = false
 		connector.connMustFail = false
 
@@ -180,5 +189,5 @@ func TestServeHTTP(t *testing.T) {
 }
 
 func TestNewHandler(t *testing.T) {
-	NewHandler(&Config{}, &mockProvider{}, &mockConnector{})
+	NewHandler(&Config{}, credstest.NewProvider(), &mockConnector{})
 }
