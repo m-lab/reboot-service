@@ -148,8 +148,11 @@ func TestAddCredentials(t *testing.T) {
 
 	// AddCredentials() should fail if the connection fails.
 	connector.mustFail = true
-	provider.AddCredentials(context.Background(), "testhost", fakeDrac)
+	err = provider.AddCredentials(context.Background(), "testhost", fakeDrac)
 	connector.mustFail = false
+	if err == nil {
+		t.Errorf("AddCredentials() expected error, got nil.")
+	}
 
 	// AddCredentials() should fail if the Put() fails.
 	mc.mustFail = true
