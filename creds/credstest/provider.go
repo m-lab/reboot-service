@@ -15,7 +15,9 @@ type FakeProvider struct {
 
 // NewProvider returns a FakeProvider.
 func NewProvider() *FakeProvider {
-	return &FakeProvider{}
+	return &FakeProvider{
+		creds: make(map[string]*creds.Credentials),
+	}
 }
 
 // FindCredentials returns a Credentials from the creds map or an error.
@@ -29,6 +31,8 @@ func (p *FakeProvider) FindCredentials(ctx context.Context,
 }
 
 // AddCredentials adds a Credentials to the map.
-func (p *FakeProvider) AddCredentials(host string, cred *creds.Credentials) {
+func (p *FakeProvider) AddCredentials(ctx context.Context, host string,
+	cred *creds.Credentials) error {
 	p.creds[host] = cred
+	return nil
 }

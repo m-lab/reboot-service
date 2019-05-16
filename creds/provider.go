@@ -24,6 +24,9 @@ type Credentials struct {
 // Provider is a Credentials provider.
 type Provider interface {
 	FindCredentials(context.Context, string) (*Credentials, error)
+
+	// AddCredentials creates a new Credentials entity on this Provider.
+	AddCredentials(context.Context, string, *Credentials) error
 }
 
 // datastoreProvider is a Provider based on Google Cloud Datastore.
@@ -69,4 +72,26 @@ func (d *datastoreProvider) FindCredentials(ctx context.Context, host string) (*
 
 	cred := creds[0]
 	return cred, nil
+}
+
+// AddCredentials creates a new Credentials entity on GCD.
+func (d *datastoreProvider) AddCredentials(ctx context.Context,
+	host string, creds *Credentials) error {
+	client, err := d.connector.NewClient(ctx, d.projectID)
+	if err != nil {
+		log.WithError(err).Errorf("Error while creating datastore client")
+		return err
+	}
+
+	log.Debugf("Adding credentials for %v to namespace %v", host, d.namespace)
+
+	// Create entity with key=hostname
+	key := datastore.NameKey(kind, host, nil)
+	key.Namespace = d.namespace
+	_, err = client.Put(ctx, key, creds)
+	if err != nil {
+		log.WithError(err).Errorf("Cannot add Credentials entity")
+		return err
+	}
+	return nil
 }

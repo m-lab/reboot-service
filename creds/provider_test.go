@@ -45,6 +45,15 @@ func (d *mockClient) GetAll(ctx context.Context, q *datastore.Query,
 	return nil, nil
 }
 
+func (d *mockClient) Put(context.Context, *datastore.Key,
+	interface{}) (*datastore.Key, error) {
+	if d.mustFail {
+		return nil, errors.New("method Put failed")
+	}
+
+	return nil, nil
+}
+
 func TestNewProvider(t *testing.T) {
 	provider := NewProvider("projectID", "ns")
 	if provider == nil {
@@ -110,4 +119,46 @@ func TestFindCredentials(t *testing.T) {
 	}
 	mc.skipAppend = false
 
+}
+
+func TestAddCredentials(t *testing.T) {
+	fakeDrac := &Credentials{
+		Hostname: "host",
+		Username: "user",
+		Password: "pass",
+		Model:    "model",
+		Address:  "address",
+	}
+
+	// Create a datastoreProvider with a mock connector and client.
+	mc := &mockClient{}
+	connector := &mockConnector{
+		client: mc,
+	}
+	provider := &datastoreProvider{
+		connector: connector,
+		namespace: "ns",
+		projectID: "projectID",
+	}
+
+	err := provider.AddCredentials(context.Background(), "testhost", fakeDrac)
+	if err != nil {
+		t.Errorf("AddCredentials() unexpected error.")
+	}
+
+	// AddCredentials() should fail if the connection fails.
+	connector.mustFail = true
+	err = provider.AddCredentials(context.Background(), "testhost", fakeDrac)
+	connector.mustFail = false
+	if err == nil {
+		t.Errorf("AddCredentials() expected error, got nil.")
+	}
+
+	// AddCredentials() should fail if the Put() fails.
+	mc.mustFail = true
+	err = provider.AddCredentials(context.Background(), "testhost", fakeDrac)
+	mc.mustFail = false
+	if err == nil {
+		t.Errorf("AddCredentials() expected error, got nil.")
+	}
 }
