@@ -162,3 +162,27 @@ func TestAddCredentials(t *testing.T) {
 		t.Errorf("AddCredentials() expected error, got nil.")
 	}
 }
+
+func TestCredentials_String(t *testing.T) {
+	creds := &Credentials{
+		Address:  "127.0.0.1",
+		Username: "username",
+		Password: "!\"£$%^&*()_+-=",
+		Model:    "DRAC",
+		Hostname: "mlab1d.lga0t.measurement-lab.org",
+	}
+
+	expected := `{
+  "hostname": "mlab1d.lga0t.measurement-lab.org",
+  "username": "username",
+  "password": "!\"£$%^&*()_+-=",
+  "model": "DRAC",
+  "address": "127.0.0.1"
+}
+`
+
+	if creds.String() != expected {
+		t.Errorf("Credentials.String() didn't return the expected output.")
+	}
+
+}
