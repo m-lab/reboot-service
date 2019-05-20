@@ -1,11 +1,14 @@
 package creds
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 
 	"cloud.google.com/go/datastore"
 	"github.com/apex/log"
+	"github.com/m-lab/go/rtx"
 )
 
 const kind = "Credentials"
@@ -19,6 +22,18 @@ type Credentials struct {
 	Password string `datastore:"password" json:"password"`
 	Model    string `datastore:"model" json:"model"`
 	Address  string `datastore:"address" json:"address"`
+}
+
+// String marshals a Credentials to a JSON string, disabling HTML escaping
+// so that special characters are shown correctly and adding indentation.
+func (c *Credentials) String() string {
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+
+	rtx.Must(enc.Encode(c), "Error while marshalling JSON")
+	return buf.String()
 }
 
 // Provider is a Credentials provider.
