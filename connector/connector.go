@@ -121,6 +121,7 @@ func (c *sshConnection) exec(cmd string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer session.Close()
 
 	output, err := session.CombinedOutput(cmd)
 	if err != nil {
