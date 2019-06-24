@@ -95,6 +95,7 @@ func (h *Handler) rebootHost(ctx context.Context, node string, site string) (str
 		metricHostReboots.WithLabelValues(site, node, "error-connect").Inc()
 		return "", err
 	}
+	defer conn.Close()
 
 	_, err = conn.Reboot()
 	if err != nil {
@@ -142,6 +143,7 @@ func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (stri
 		metricBMCReboots.WithLabelValues(site, node, "error-connect").Inc()
 		return "", err
 	}
+	defer conn.Close()
 
 	start := time.Now()
 	output, err := conn.Reboot()
