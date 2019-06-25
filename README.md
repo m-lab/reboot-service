@@ -1,3 +1,5 @@
+[![GoDoc](https://godoc.org/github.com/m-lab/reboot-service?status.svg)](https://godoc.org/github.com/m-lab/reboot-service) [![Build Status](https://travis-ci.org/m-lab/reboot-service.svg?branch=master)](https://travis-ci.org/m-lab/reboot-service) [![Coverage Status](https://coveralls.io/repos/github/m-lab/reboot-service/badge.svg?branch=master)](https://coveralls.io/github/m-lab/reboot-service?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/m-lab/reboot-service)](https://goreportcard.com/report/github.com/m-lab/reboot-service)
+
 # Reboot API
 This API allows to execute common operations on M-Lab platform's BMC
 modules and CoreOS hosts.
