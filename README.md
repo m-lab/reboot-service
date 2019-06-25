@@ -83,7 +83,7 @@ To configure HTTP Basic Authentication, you need to specify `-auth.username` and
 To reboot nodes via CoreOS, a valid SSH private key must be provided,
 for example: `./reboot-service --reboot.key=/path/to/private.key` .
 
-### Building the Docker image
+### Running with Docker
 The Docker image can be generated with `docker -t reboot-api .`
 
 After generating the image, you can run it with `docker run reboot-api`
