@@ -20,7 +20,7 @@ Parameter         | Description
 
 *Reboot mlab1.lga0t via the BMC:*
 ```
-curl -X POST https://<reboot api url>/v1/reboot?host=mlab1.lga0t
+curl -X POST https://<reboot-api-url>/v1/reboot?host=mlab1.lga0t
 ```
 
 *Reboot mlab1.lga0t by running `systemctl reboot` on CoreOS:*
