@@ -22,14 +22,14 @@ type collectorConfig struct {
 	connector connector.Connector
 }
 
-type bmcE2ECollector struct {
+type e2eTestCollector struct {
 	target       string
 	config       *collectorConfig
 	resultMetric *prometheus.Desc
 }
 
-func newBMCE2ECollector(target string, config *collectorConfig) *bmcE2ECollector {
-	return &bmcE2ECollector{
+func newE2ETestCollector(target string, config *collectorConfig) *e2eTestCollector {
+	return &e2eTestCollector{
 		target: target,
 		config: config,
 		resultMetric: prometheus.NewDesc("reboot_e2e_result",
@@ -38,11 +38,11 @@ func newBMCE2ECollector(target string, config *collectorConfig) *bmcE2ECollector
 	}
 }
 
-func (c *bmcE2ECollector) Describe(ch chan<- *prometheus.Desc) {
+func (c *e2eTestCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.resultMetric
 }
 
-func (c *bmcE2ECollector) Collect(ch chan<- prometheus.Metric) {
+func (c *e2eTestCollector) Collect(ch chan<- prometheus.Metric) {
 	// Get credentials for this BMC using the configured provider.
 	creds, err := c.getCredentials(c.target)
 	if err != nil {
@@ -76,7 +76,7 @@ func (c *bmcE2ECollector) Collect(ch chan<- prometheus.Metric) {
 		1, c.target, statusOK)
 }
 
-func (c *bmcE2ECollector) getCredentials(hostname string) (*creds.Credentials, error) {
+func (c *e2eTestCollector) getCredentials(hostname string) (*creds.Credentials, error) {
 	creds, err := c.config.provider.FindCredentials(context.Background(), hostname)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot retrieve credentials: %v", err)
