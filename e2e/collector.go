@@ -43,8 +43,6 @@ func (c *bmcE2ECollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *bmcE2ECollector) Collect(ch chan<- prometheus.Metric) {
-	// TODO: actually try connecting to the BMC and report result.
-
 	// Get credentials for this BMC using the configured provider.
 	creds, err := c.getCredentials(c.target)
 	if err != nil {
