@@ -65,8 +65,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	collectorConfig := &collectorConfig{
+		connector: h.connector,
+		provider:  h.provider,
+	}
+
 	registry := prometheus.NewRegistry()
-	collector := newBMCE2ECollector(bmcHost)
+	collector := newBMCE2ECollector(bmcHost, collectorConfig)
 	registry.MustRegister(collector)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 	promHandler.ServeHTTP(w, r)
