@@ -94,11 +94,11 @@ func main() {
 	connector := connector.NewConnector()
 
 	var (
-		rebootHandler  http.Handler
-		bmcTestHandler http.Handler
+		rebootHandler http.Handler
+		e2eHandler    http.Handler
 	)
 	rebootHandler = reboot.NewHandler(rebootConfig, credentials, connector)
-	bmcTestHandler = e2e.NewHandler(nil, credentials, connector)
+	e2eHandler = e2e.NewHandler(int32(*bmcPort), credentials, connector)
 
 	// Initialize HTTP server.
 	// TODO(roberto): add promhttp instruments for handlers.
@@ -109,7 +109,7 @@ func main() {
 			Password: *password,
 		}
 		rebootHandler = httpauth.BasicAuth(authOpts)(rebootHandler)
-		bmcTestHandler = httpauth.BasicAuth(authOpts)(bmcTestHandler)
+		e2eHandler = httpauth.BasicAuth(authOpts)(e2eHandler)
 	} else {
 		log.Warn("Username and password have not been specified!")
 		log.Warn("Make sure you add -auth.username and -auth.password before " +
@@ -118,7 +118,7 @@ func main() {
 
 	rebootMux := http.NewServeMux()
 	rebootMux.Handle("/v1/reboot", rebootHandler)
-	rebootMux.Handle("/v1/e2e", bmcTestHandler)
+	rebootMux.Handle("/v1/e2e", e2eHandler)
 
 	s := makeHTTPServer(rebootMux)
 	// Setup TLS and autocert

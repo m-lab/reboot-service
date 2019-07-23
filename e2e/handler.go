@@ -15,24 +15,18 @@ import (
 	"github.com/m-lab/reboot-service/creds"
 )
 
-// Config holds the configuration for the e2e endpoint.
-type Config struct {
-	// Datastore configuration
-	ProjectID string
-	Namespace string
-}
-
 // Handler is the HTTP handler for /e2e
 type Handler struct {
-	config    *Config
+	bmcPort int32
+
 	connector connector.Connector
 	provider  creds.Provider
 }
 
 // NewHandler returns a Handler with the specified configuration.
-func NewHandler(c *Config, prov creds.Provider, connector connector.Connector) *Handler {
+func NewHandler(bmcPort int32, prov creds.Provider, connector connector.Connector) *Handler {
 	return &Handler{
-		config:    c,
+		bmcPort:   bmcPort,
 		connector: connector,
 		provider:  prov,
 	}
@@ -66,6 +60,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	collectorConfig := &collectorConfig{
+		bmcPort:   h.bmcPort,
 		connector: h.connector,
 		provider:  h.provider,
 	}
