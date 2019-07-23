@@ -23,5 +23,5 @@ func (c *bmcE2ECollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *bmcE2ECollector) Collect(ch chan<- prometheus.Metric) {
 	// TODO: actual collect metrics from the BMC.
-	ch <- prometheus.MustNewConstMetric(c.resultMetric, prometheus.GaugeValue, 1)
+	ch <- prometheus.MustNewConstMetric(c.resultMetric, prometheus.GaugeValue, 1, c.target)
 }
