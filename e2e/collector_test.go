@@ -18,8 +18,7 @@ import (
 
 // Mock structs for Connector and Connection interfaces.
 type mockConnector struct {
-	mustFail     bool
-	connMustFail bool
+	mustFail bool
 }
 
 type mockConnection struct {
@@ -30,9 +29,7 @@ func (connector *mockConnector) NewConnection(*connector.ConnectionConfig) (conn
 	if connector.mustFail {
 		return nil, errors.New("method NewConnection() failed")
 	}
-	return &mockConnection{
-		mustFail: connector.connMustFail,
-	}, nil
+	return &mockConnection{}, nil
 }
 
 func (connection *mockConnection) Reboot() (string, error) {
