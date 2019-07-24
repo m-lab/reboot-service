@@ -13,6 +13,7 @@ import (
 
 	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
+	"github.com/m-lab/reboot-service/e2e"
 
 	"github.com/m-lab/reboot-service/creds"
 
@@ -92,8 +93,12 @@ func main() {
 	credentials := creds.NewProvider(*projectID, *namespace)
 	connector := connector.NewConnector()
 
-	var rebootHandler http.Handler
+	var (
+		rebootHandler http.Handler
+		e2eHandler    http.Handler
+	)
 	rebootHandler = reboot.NewHandler(rebootConfig, credentials, connector)
+	e2eHandler = e2e.NewHandler(int32(*bmcPort), credentials, connector)
 
 	// Initialize HTTP server.
 	// TODO(roberto): add promhttp instruments for handlers.
@@ -104,6 +109,7 @@ func main() {
 			Password: *password,
 		}
 		rebootHandler = httpauth.BasicAuth(authOpts)(rebootHandler)
+		e2eHandler = httpauth.BasicAuth(authOpts)(e2eHandler)
 	} else {
 		log.Warn("Username and password have not been specified!")
 		log.Warn("Make sure you add -auth.username and -auth.password before " +
@@ -112,6 +118,7 @@ func main() {
 
 	rebootMux := http.NewServeMux()
 	rebootMux.Handle("/v1/reboot", rebootHandler)
+	rebootMux.Handle("/v1/e2e", e2eHandler)
 
 	s := makeHTTPServer(rebootMux)
 	// Setup TLS and autocert
