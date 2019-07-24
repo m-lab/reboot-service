@@ -47,7 +47,7 @@ func Test_newE2ETestCollector(t *testing.T) {
 		provider:  credstest.NewProvider(),
 	}
 
-	collector := newE2ETestCollector("mlab1.lga0t.measurement-lab.org", config)
+	collector := newE2ETestCollector("mlab1.abc0t.measurement-lab.org", config)
 	if collector == nil {
 		t.Errorf("newE2ETestCollector() returned nil.")
 	}
@@ -57,8 +57,8 @@ func Test_e2eTestCollector_Collect(t *testing.T) {
 	provider := credstest.NewProvider()
 	connector := &mockConnector{}
 	provider.AddCredentials(context.Background(),
-		"mlab1d.lga0t.measurement-lab.org", &creds.Credentials{
-			Hostname: "mlab1d.lga0t.measurement-lab.org",
+		"mlab1d.abc0t.measurement-lab.org", &creds.Credentials{
+			Hostname: "mlab1d.abc0t.measurement-lab.org",
 			Username: "admin",
 			Password: "dummy",
 		})
@@ -67,7 +67,7 @@ func Test_e2eTestCollector_Collect(t *testing.T) {
 		connector: connector,
 		provider:  provider,
 	}
-	collector := newE2ETestCollector("mlab1d.lga0t.measurement-lab.org", config)
+	collector := newE2ETestCollector("mlab1d.abc0t.measurement-lab.org", config)
 
 	// Compare actual vs expected output in the "ok" case.
 	expMetadata := `# HELP reboot_e2e_result E2E test result for this target
@@ -75,7 +75,7 @@ func Test_e2eTestCollector_Collect(t *testing.T) {
 
 `
 	expMetric := `
-reboot_e2e_result{status="` + statusOK + `",target="mlab1d.lga0t.measurement-lab.org"} 1
+reboot_e2e_result{status="` + statusOK + `",target="mlab1d.abc0t.measurement-lab.org"} 1
 `
 	err := testutil.CollectAndCompare(collector, strings.NewReader(
 		expMetadata+expMetric))
@@ -85,10 +85,10 @@ reboot_e2e_result{status="` + statusOK + `",target="mlab1d.lga0t.measurement-lab
 
 	// COmpare actual vs expected output in the "connection_failed" case.
 	expMetric = `
-reboot_e2e_result{status="` + statusConnectionFailed + `",target="mlab1d.lga0t.measurement-lab.org"} 0
+reboot_e2e_result{status="` + statusConnectionFailed + `",target="mlab1d.abc0t.measurement-lab.org"} 0
 `
 	connector.mustFail = true
-	collector = newE2ETestCollector("mlab1d.lga0t.measurement-lab.org", config)
+	collector = newE2ETestCollector("mlab1d.abc0t.measurement-lab.org", config)
 	err = testutil.CollectAndCompare(collector, strings.NewReader(
 		expMetadata+expMetric))
 	if err != nil {
@@ -97,9 +97,9 @@ reboot_e2e_result{status="` + statusConnectionFailed + `",target="mlab1d.lga0t.m
 
 	// Compare actual vs expected output in the "credentials_not_found" case.
 	expMetric = `
-reboot_e2e_result{status="` + statusCredsNotFound + `",target="mlab2d.lga0t.measurement-lab.org"} 0
+reboot_e2e_result{status="` + statusCredsNotFound + `",target="mlab2d.abc0t.measurement-lab.org"} 0
 `
-	collector = newE2ETestCollector("mlab2d.lga0t.measurement-lab.org", config)
+	collector = newE2ETestCollector("mlab2d.abc0t.measurement-lab.org", config)
 	err = testutil.CollectAndCompare(collector, strings.NewReader(
 		expMetadata+expMetric))
 	if err != nil {

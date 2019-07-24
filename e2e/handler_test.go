@@ -31,29 +31,29 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		connectorMustFail bool
 	}{
 		{
-			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.lga0t", nil),
+			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.abc0t", nil),
 			status: http.StatusOK,
 			body: expMetadata + `reboot_e2e_result{status="` + statusOK +
-				`",target="mlab1d.lga0t.measurement-lab.org"} 1
+				`",target="mlab1d.abc0t.measurement-lab.org"} 1
 `,
 		},
 		{
-			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab2d.lga0t", nil),
+			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab2d.abc0t", nil),
 			status: http.StatusOK,
 			body: expMetadata + `reboot_e2e_result{status="` + statusCredsNotFound +
-				`",target="mlab2d.lga0t.measurement-lab.org"} 0
+				`",target="mlab2d.abc0t.measurement-lab.org"} 0
 `,
 		},
 		{
-			req:               httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.lga0t", nil),
+			req:               httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.abc0t", nil),
 			status:            http.StatusOK,
 			connectorMustFail: true,
 			body: expMetadata + `reboot_e2e_result{status="` + statusConnectionFailed +
-				`",target="mlab1d.lga0t.measurement-lab.org"} 0
+				`",target="mlab1d.abc0t.measurement-lab.org"} 0
 `,
 		},
 		{
-			req:    httptest.NewRequest("POST", "/v1/e2e?target=mlab1d.lga0t", nil),
+			req:    httptest.NewRequest("POST", "/v1/e2e?target=mlab1d.abc0t", nil),
 			status: http.StatusMethodNotAllowed,
 		},
 		{
@@ -71,8 +71,8 @@ func TestHandler_ServeHTTP(t *testing.T) {
 	// Create a FakeProvider and populate it with fake Credentials.
 	provider := credstest.NewProvider()
 	provider.AddCredentials(context.Background(),
-		"mlab1d.lga0t.measurement-lab.org", &creds.Credentials{
-			Hostname: "mlab1.lga0t",
+		"mlab1d.abc0t.measurement-lab.org", &creds.Credentials{
+			Hostname: "mlab1.abc0t",
 			Username: "testuser",
 			Password: "testpass",
 			Model:    "drac",
