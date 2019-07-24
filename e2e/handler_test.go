@@ -117,20 +117,36 @@ func TestHandler_ServeHTTP(t *testing.T) {
 }
 
 func Test_parseBMCHostname(t *testing.T) {
-	type args struct {
-		hostname string
-	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
+		name     string
+		hostname string
+		want     string
+		wantErr  bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:     "ok-full-hostname",
+			hostname: "mlab1d.abc0t.measurement-lab.org",
+			want:     "mlab1d.abc0t.measurement-lab.org",
+		},
+		{
+			name:     "ok-shorthand-hostname",
+			hostname: "mlab1d.abc0t",
+			want:     "mlab1d.abc0t.measurement-lab.org",
+		},
+		{
+			name:     "failure-wrong-node-name",
+			hostname: "mlab1.abc0t",
+			wantErr:  true,
+		},
+		{
+			name:     "failure-wrong-site-name",
+			hostname: "mlab1d.abc0",
+			wantErr:  true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseBMCHostname(tt.args.hostname)
+			got, err := parseBMCHostname(tt.hostname)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseBMCHostname() error = %v, wantErr %v", err, tt.wantErr)
 				return
