@@ -15,6 +15,8 @@ import (
 	"github.com/m-lab/reboot-service/creds"
 )
 
+var bmcHostRegex = regexp.MustCompile("(mlab[1-4]d)\\.([a-zA-Z]{3}[0-9t]{2}).*")
+
 // Handler is the HTTP handler for /e2e
 type Handler struct {
 	bmcPort int32
@@ -75,8 +77,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // parseBMCHostname matches the provided hostname against a regex and returns
 // a full valid M-Lab BMC hostname, if possible.
 func parseBMCHostname(hostname string) (string, error) {
-	regex := regexp.MustCompile("(mlab[1-4]d)\\.([a-zA-Z]{3}[0-9t]{2}).*")
-	result := regex.FindStringSubmatch(hostname)
+	result := bmcHostRegex.FindStringSubmatch(hostname)
 	if len(result) != 3 {
 		return "",
 			fmt.Errorf("The specified hostname is not a valid BMC hostname: %s", hostname)
