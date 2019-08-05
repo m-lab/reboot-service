@@ -16,6 +16,7 @@ const (
 	statusCredsNotFound    = "credentials_not_found"
 	statusConnectionFailed = "connection_failed"
 
+	// Timeout for the e2e test must be shorter than Prometheus' timeout.
 	connectionTimeout = 45 * time.Second
 )
 
