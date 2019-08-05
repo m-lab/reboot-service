@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/apex/log"
 	"github.com/m-lab/reboot-service/connector"
@@ -14,6 +15,9 @@ const (
 	statusOK               = "ok"
 	statusCredsNotFound    = "credentials_not_found"
 	statusConnectionFailed = "connection_failed"
+
+	// Timeout for the e2e test must be shorter than Prometheus' timeout.
+	connectionTimeout = 45 * time.Second
 )
 
 type collectorConfig struct {
@@ -59,6 +63,7 @@ func (c *e2eTestCollector) Collect(ch chan<- prometheus.Metric) {
 		Port:     c.config.bmcPort,
 		Username: creds.Username,
 		Password: creds.Password,
+		Timeout:  connectionTimeout,
 	}
 	conn, err := c.config.connector.NewConnection(config)
 	if err != nil {
