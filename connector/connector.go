@@ -22,8 +22,7 @@ const (
 	// BMCConnection is an SSH connection to the node's BMC
 	BMCConnection ConnType = 1
 	// HostConnection is an SSH connection to the node's OS
-	HostConnection    ConnType = 2
-	connectionTimeout          = 60 * time.Second
+	HostConnection ConnType = 2
 )
 
 // ConnectionConfig holds the configuration for a Connection
@@ -35,6 +34,7 @@ type ConnectionConfig struct {
 	PrivateKeyFile string
 
 	ConnType ConnType
+	Timeout  time.Duration
 }
 
 // Connector is a provider for Connections.
@@ -79,7 +79,7 @@ func (s *sshConnector) NewConnection(config *ConnectionConfig) (Connection, erro
 		User:            config.Username,
 		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         connectionTimeout,
+		Timeout:         config.Timeout,
 	}
 
 	cl, err := s.dialer.Dial("tcp",

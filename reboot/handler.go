@@ -14,6 +14,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+const bmcTimeout = 60 * time.Second
+
 var (
 	metricBMCReboots = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -133,6 +135,7 @@ func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (stri
 		Port:           h.config.BMCPort,
 		PrivateKeyFile: h.config.PrivateKeyPath,
 		ConnType:       connector.BMCConnection,
+		Timeout:        bmcTimeout,
 	}
 
 	conn, err := h.connector.NewConnection(connectionConfig)
