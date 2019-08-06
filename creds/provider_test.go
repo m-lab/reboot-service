@@ -54,6 +54,10 @@ func (d *mockClient) Put(context.Context, *datastore.Key,
 	return nil, nil
 }
 
+func (d *mockClient) Close() error {
+	return nil
+}
+
 func TestNewProvider(t *testing.T) {
 	provider := NewProvider("projectID", "ns")
 	if provider == nil {

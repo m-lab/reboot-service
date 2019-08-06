@@ -68,6 +68,7 @@ func (d *datastoreProvider) FindCredentials(ctx context.Context, host string) (*
 		log.WithError(err).Errorf("Error while creating datastore client")
 		return nil, err
 	}
+	defer client.Close()
 
 	log.Debugf("Retrieving credentials for %v from namespace %v", host, d.namespace)
 
@@ -97,6 +98,7 @@ func (d *datastoreProvider) AddCredentials(ctx context.Context,
 		log.WithError(err).Errorf("Error while creating datastore client")
 		return err
 	}
+	defer client.Close()
 
 	log.Debugf("Adding credentials for %v to namespace %v", host, d.namespace)
 
