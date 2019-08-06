@@ -36,8 +36,3 @@ func (p *FakeProvider) AddCredentials(ctx context.Context, host string,
 	p.creds[host] = cred
 	return nil
 }
-
-// Close doesn't do anything.
-func (p *FakeProvider) Close() error {
-	return nil
-}
