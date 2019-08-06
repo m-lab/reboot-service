@@ -13,6 +13,7 @@ import (
 type client interface {
 	GetAll(ctx context.Context, q *datastore.Query, dst interface{}) ([]*datastore.Key, error)
 	Put(context.Context, *datastore.Key, interface{}) (*datastore.Key, error)
+	Close() error
 }
 
 type connector interface {

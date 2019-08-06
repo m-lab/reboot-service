@@ -62,3 +62,8 @@ func TestNewProvider(t *testing.T) {
 		t.Errorf("NewProvider() returned nil.")
 	}
 }
+
+func TestFakeProvider_Close(t *testing.T) {
+	prov := NewProvider()
+	prov.Close()
+}
