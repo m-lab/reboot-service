@@ -54,6 +54,13 @@ func (d *mockClient) Put(context.Context, *datastore.Key,
 	return nil, nil
 }
 
+func (d *mockClient) Delete(ctx context.Context, key *datastore.Key) error {
+	if d.mustFail {
+		return errors.New("method Delete failed")
+	}
+	return nil
+}
+
 func (d *mockClient) Close() error {
 	return nil
 }
@@ -189,4 +196,51 @@ func TestCredentials_String(t *testing.T) {
 		t.Errorf("Credentials.String() didn't return the expected output.")
 	}
 
+}
+
+func Test_datastoreProvider_deleteCredentials(t *testing.T) {
+	fakeDrac := &Credentials{
+		Hostname: "testhost",
+		Username: "user",
+		Password: "pass",
+		Model:    "model",
+		Address:  "address",
+	}
+
+	// Create a datastoreProvider with a mock connector and client.
+	mc := &mockClient{}
+	connector := &mockConnector{
+		client: mc,
+	}
+	provider := &datastoreProvider{
+		connector: connector,
+		namespace: "ns",
+		projectID: "projectID",
+	}
+
+	err := provider.AddCredentials(context.Background(), "testhost", fakeDrac)
+	if err != nil {
+		t.Errorf("AddCredentials() unexpected error.")
+	}
+
+	err = provider.DeleteCredentials(context.Background(), "testhost")
+	if err != nil {
+		t.Errorf("DeleteCredentials() returned error: %v", err)
+	}
+
+	// DeleteCredentials() should fail if the connection fails.
+	connector.mustFail = true
+	err = provider.DeleteCredentials(context.Background(), "testhost")
+	connector.mustFail = false
+	if err == nil {
+		t.Errorf("DeleteCredentials() expected error, got nil.")
+	}
+
+	// DeleteCredentials() should fail if the Delete() fails.
+	mc.mustFail = true
+	err = provider.DeleteCredentials(context.Background(), "testhost")
+	mc.mustFail = false
+	if err == nil {
+		t.Errorf("DeleteCredentials() expected error, got nil.")
+	}
 }
