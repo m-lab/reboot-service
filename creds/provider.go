@@ -42,6 +42,10 @@ type Provider interface {
 
 	// AddCredentials creates a new Credentials entity on this Provider.
 	AddCredentials(context.Context, string, *Credentials) error
+
+	// DeleteCredentials removes existing Credentials entities from this
+	// provider.
+	DeleteCredentials(context.Context, string) error
 }
 
 // datastoreProvider is a Provider based on Google Cloud Datastore.
@@ -108,6 +112,28 @@ func (d *datastoreProvider) AddCredentials(ctx context.Context,
 	_, err = client.Put(ctx, key, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Cannot add Credentials entity")
+		return err
+	}
+	return nil
+}
+
+func (d *datastoreProvider) DeleteCredentials(ctx context.Context,
+	host string) error {
+	client, err := d.connector.NewClient(ctx, d.projectID)
+	if err != nil {
+		log.WithError(err).Errorf("Error while creating datastore client")
+		return err
+	}
+	defer client.Close()
+
+	log.Debugf("Deleting credentials for %v from namespace %v", host, d.namespace)
+
+	// Remove entity with key=hostname
+	key := datastore.NameKey(kind, host, nil)
+	key.Namespace = d.namespace
+	err = client.Delete(ctx, key)
+	if err != nil {
+		log.WithError(err).Errorf("Error deleting entity %s", host)
 		return err
 	}
 	return nil

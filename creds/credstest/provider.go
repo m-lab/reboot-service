@@ -36,3 +36,11 @@ func (p *FakeProvider) AddCredentials(ctx context.Context, host string,
 	p.creds[host] = cred
 	return nil
 }
+
+// DeleteCredentials removes a Credentials from the map.
+func (p *FakeProvider) DeleteCredentials(ctx context.Context, host string) error {
+	if _, ok := p.creds[host]; ok {
+		delete(p.creds, host)
+	}
+	return errors.New("hostname not found")
+}
