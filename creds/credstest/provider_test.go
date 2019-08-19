@@ -62,3 +62,31 @@ func TestNewProvider(t *testing.T) {
 		t.Errorf("NewProvider() returned nil.")
 	}
 }
+
+func TestFakeProvider_DeleteCredentials(t *testing.T) {
+	fakeDrac := &creds.Credentials{
+		Hostname: "host",
+		Username: "user",
+		Password: "pass",
+		Model:    "model",
+		Address:  "address",
+	}
+
+	provider := &FakeProvider{
+		creds: map[string]*creds.Credentials{
+			"test": fakeDrac,
+		},
+	}
+
+	err := provider.DeleteCredentials(context.Background(), "test")
+	if err != nil {
+		t.Errorf("DeleteCredentials() returned an error: %v", err)
+	}
+
+	// This should fail the second time as the entity has been removed.
+	err = provider.DeleteCredentials(context.Background(), "test")
+	if err == nil {
+		t.Errorf("DeleteCredentials() - expected err, got nil.")
+	}
+
+}

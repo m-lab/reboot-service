@@ -38,9 +38,13 @@ func (p *FakeProvider) AddCredentials(ctx context.Context, host string,
 }
 
 // DeleteCredentials removes a Credentials from the map.
+// Note: GCD does not return an error if the key does not exist. However, to
+// make this easier to test, FakeProvider.DeleteCredentials will fail in that
+// case.
 func (p *FakeProvider) DeleteCredentials(ctx context.Context, host string) error {
 	if _, ok := p.creds[host]; ok {
 		delete(p.creds, host)
+		return nil
 	}
 	return errors.New("hostname not found")
 }
