@@ -62,13 +62,30 @@ func (d *mockClient) Delete(ctx context.Context, key *datastore.Key) error {
 }
 
 func (d *mockClient) Close() error {
+	if d.mustFail {
+		return errors.New("method Close failed")
+	}
 	return nil
 }
 
 func TestNewProvider(t *testing.T) {
-	provider := NewProvider("projectID", "ns")
+	mc := &mockClient{}
+	connector := &mockConnector{
+		client: mc,
+	}
+	provider, err := NewProvider(connector, "projectID", "ns")
+	if err != nil {
+		t.Errorf("NewProvider() returned err: %v", err)
+	}
 	if provider == nil {
-		t.Errorf("NewProvider() returned nil.")
+		t.Errorf("NewProvider() returned a nil provider.")
+	}
+
+	// Simulate a failure during client initialization.
+	connector.mustFail = true
+	provider, err = NewProvider(connector, "projectID", "ns")
+	if err == nil {
+		t.Errorf("NewProvider() expected err, got nil.")
 	}
 }
 
@@ -87,14 +104,10 @@ func TestFindCredentials(t *testing.T) {
 		},
 	}
 
-	// Inject mockConnector to simulate network failures.
-	connector := &mockConnector{
-		client: mc,
-	}
 	provider := &datastoreProvider{
-		connector: connector,
 		namespace: "ns",
 		projectID: "projectID",
+		client:    mc,
 	}
 
 	// FindCredentials() should return a Credentials for a known host.
@@ -105,14 +118,6 @@ func TestFindCredentials(t *testing.T) {
 	if *creds != *fakeDrac {
 		t.Errorf("FindCredentials() didn't return the expected Credential")
 	}
-
-	// FindCredentials() should fail if the connection fails.
-	connector.mustFail = true
-	_, err = provider.FindCredentials(context.Background(), "testhost")
-	if err == nil {
-		t.Errorf("FindCredentials() expected error, got nil.")
-	}
-	connector.mustFail = false
 
 	// FindCredentials() should fail if the query fails.
 	mc.mustFail = true
@@ -143,11 +148,8 @@ func TestAddCredentials(t *testing.T) {
 
 	// Create a datastoreProvider with a mock connector and client.
 	mc := &mockClient{}
-	connector := &mockConnector{
-		client: mc,
-	}
 	provider := &datastoreProvider{
-		connector: connector,
+		client:    mc,
 		namespace: "ns",
 		projectID: "projectID",
 	}
@@ -155,14 +157,6 @@ func TestAddCredentials(t *testing.T) {
 	err := provider.AddCredentials(context.Background(), "testhost", fakeDrac)
 	if err != nil {
 		t.Errorf("AddCredentials() unexpected error.")
-	}
-
-	// AddCredentials() should fail if the connection fails.
-	connector.mustFail = true
-	err = provider.AddCredentials(context.Background(), "testhost", fakeDrac)
-	connector.mustFail = false
-	if err == nil {
-		t.Errorf("AddCredentials() expected error, got nil.")
 	}
 
 	// AddCredentials() should fail if the Put() fails.
@@ -209,11 +203,8 @@ func Test_datastoreProvider_deleteCredentials(t *testing.T) {
 
 	// Create a datastoreProvider with a mock connector and client.
 	mc := &mockClient{}
-	connector := &mockConnector{
-		client: mc,
-	}
 	provider := &datastoreProvider{
-		connector: connector,
+		client:    mc,
 		namespace: "ns",
 		projectID: "projectID",
 	}
@@ -228,19 +219,32 @@ func Test_datastoreProvider_deleteCredentials(t *testing.T) {
 		t.Errorf("DeleteCredentials() returned error: %v", err)
 	}
 
-	// DeleteCredentials() should fail if the connection fails.
-	connector.mustFail = true
-	err = provider.DeleteCredentials(context.Background(), "testhost")
-	connector.mustFail = false
-	if err == nil {
-		t.Errorf("DeleteCredentials() expected error, got nil.")
-	}
-
 	// DeleteCredentials() should fail if the Delete() fails.
 	mc.mustFail = true
 	err = provider.DeleteCredentials(context.Background(), "testhost")
 	mc.mustFail = false
 	if err == nil {
 		t.Errorf("DeleteCredentials() expected error, got nil.")
+	}
+}
+
+func Test_datastoreProvider_Close(t *testing.T) {
+	// Create a datastoreProvider with a mock connector and client.
+	mc := &mockClient{}
+	provider := &datastoreProvider{
+		client:    mc,
+		namespace: "ns",
+		projectID: "projectID",
+	}
+
+	err := provider.Close()
+	if err != nil {
+		t.Errorf("Close() returned error: %v", err)
+	}
+
+	mc.mustFail = true
+	err = provider.Close()
+	if err == nil {
+		t.Errorf("Close() expected error, got nil.")
 	}
 }

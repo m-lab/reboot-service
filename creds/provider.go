@@ -53,34 +53,33 @@ type datastoreProvider struct {
 	projectID string
 	namespace string
 
-	connector connector
+	client client
 }
 
-// NewProvider returns a Provider based on the default implementation (GCD).
-func NewProvider(projectID, namespace string) Provider {
+// NewProvider creates a new Provider for the given projectID and namespace.
+// The underlying client is initialized via the provided connector.
+func NewProvider(connector connector, projectID, namespace string) (Provider, error) {
+	client, err := connector.NewClient(context.Background(), projectID)
+	if err != nil {
+		log.WithError(err).Error("cannot create Datastore client")
+		return nil, err
+	}
+
 	return &datastoreProvider{
 		projectID: projectID,
 		namespace: namespace,
-
-		connector: &datastoreConnector{},
-	}
+		client:    client,
+	}, nil
 }
 
 func (d *datastoreProvider) FindCredentials(ctx context.Context, host string) (*Credentials, error) {
-	client, err := d.connector.NewClient(ctx, d.projectID)
-	if err != nil {
-		log.WithError(err).Errorf("Error while creating datastore client")
-		return nil, err
-	}
-	defer client.Close()
-
 	log.Debugf("Retrieving credentials for %v from namespace %v", host, d.namespace)
 
 	query := datastore.NewQuery(kind).Namespace(d.namespace)
 	query = query.Filter("hostname = ", host)
 
 	var creds []*Credentials
-	_, err = client.GetAll(ctx, query, &creds)
+	_, err := d.client.GetAll(ctx, query, &creds)
 
 	if err != nil {
 		return nil, err
@@ -97,19 +96,12 @@ func (d *datastoreProvider) FindCredentials(ctx context.Context, host string) (*
 // AddCredentials creates a new Credentials entity on GCD.
 func (d *datastoreProvider) AddCredentials(ctx context.Context,
 	host string, creds *Credentials) error {
-	client, err := d.connector.NewClient(ctx, d.projectID)
-	if err != nil {
-		log.WithError(err).Errorf("Error while creating datastore client")
-		return err
-	}
-	defer client.Close()
-
 	log.Debugf("Adding credentials for %v to namespace %v", host, d.namespace)
 
 	// Create entity with key=hostname
 	key := datastore.NameKey(kind, host, nil)
 	key.Namespace = d.namespace
-	_, err = client.Put(ctx, key, creds)
+	_, err := d.client.Put(ctx, key, creds)
 	if err != nil {
 		log.WithError(err).Errorf("Cannot add Credentials entity")
 		return err
@@ -119,21 +111,24 @@ func (d *datastoreProvider) AddCredentials(ctx context.Context,
 
 func (d *datastoreProvider) DeleteCredentials(ctx context.Context,
 	host string) error {
-	client, err := d.connector.NewClient(ctx, d.projectID)
-	if err != nil {
-		log.WithError(err).Errorf("Error while creating datastore client")
-		return err
-	}
-	defer client.Close()
-
 	log.Debugf("Deleting credentials for %v from namespace %v", host, d.namespace)
 
 	// Remove entity with key=hostname
 	key := datastore.NameKey(kind, host, nil)
 	key.Namespace = d.namespace
-	err = client.Delete(ctx, key)
+	err := d.client.Delete(ctx, key)
 	if err != nil {
 		log.WithError(err).Errorf("Error deleting entity %s", host)
+		return err
+	}
+	return nil
+}
+
+// Close calls the underlying client's Close() method.
+func (d *datastoreProvider) Close() error {
+	err := d.client.Close()
+	if err != nil {
+		log.WithError(err).Error("error while closing client")
 		return err
 	}
 	return nil
