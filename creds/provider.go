@@ -58,7 +58,7 @@ type datastoreProvider struct {
 
 // NewProvider creates a new Provider for the given projectID and namespace.
 // The underlying client is initialized via the provided connector.
-func NewProvider(connector connector, projectID, namespace string) (Provider, error) {
+func NewProvider(connector Connector, projectID, namespace string) (Provider, error) {
 	client, err := connector.NewClient(context.Background(), projectID)
 	if err != nil {
 		log.WithError(err).Error("cannot create Datastore client")

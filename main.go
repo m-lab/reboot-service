@@ -90,7 +90,10 @@ func main() {
 
 	// Initialize configuration, credentials provider and connector.
 	rebootConfig := createRebootConfig()
-	credentials := creds.NewProvider(*projectID, *namespace)
+	credentials, err := creds.NewProvider(&creds.DatastoreConnector{},
+		*projectID, *namespace)
+	rtx.Must(err, "Cannot initialize Datastore connection")
+
 	connector := connector.NewConnector()
 
 	var (
