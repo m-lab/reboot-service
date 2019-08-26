@@ -46,6 +46,9 @@ type Provider interface {
 	// DeleteCredentials removes existing Credentials entities from this
 	// provider.
 	DeleteCredentials(context.Context, string) error
+
+	// Close closes the underlying Client connection.
+	Close() error
 }
 
 // datastoreProvider is a Provider based on Google Cloud Datastore.
