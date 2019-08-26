@@ -48,3 +48,8 @@ func (p *FakeProvider) DeleteCredentials(ctx context.Context, host string) error
 	}
 	return errors.New("hostname not found")
 }
+
+// Close does not do anything as there is no actual connection.
+func (p *FakeProvider) Close() error {
+	return nil
+}
