@@ -17,12 +17,16 @@ type client interface {
 	Close() error
 }
 
-type connector interface {
+// Connector is an interface to abstract a new Client creation.
+type Connector interface {
 	NewClient(context.Context, string, ...option.ClientOption) (client, error)
 }
 
-type datastoreConnector struct{}
+// DatastoreConnector is the default implementation of a Connector. It allows to
+// create a new datastore Client.
+type DatastoreConnector struct{}
 
-func (d *datastoreConnector) NewClient(ctx context.Context, projectID string, opts ...option.ClientOption) (client, error) {
+// NewClient returns a datastore Client with the provided configuration.
+func (d *DatastoreConnector) NewClient(ctx context.Context, projectID string, opts ...option.ClientOption) (client, error) {
 	return datastore.NewClient(ctx, projectID, opts...)
 }
