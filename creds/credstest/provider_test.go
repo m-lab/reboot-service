@@ -90,3 +90,8 @@ func TestFakeProvider_DeleteCredentials(t *testing.T) {
 	}
 
 }
+
+func TestFakeProvider_Close(t *testing.T) {
+	provider := &FakeProvider{}
+	provider.Close()
+}
