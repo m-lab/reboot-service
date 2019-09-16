@@ -139,6 +139,9 @@ func (c *sshConnection) exec(cmd string) (string, error) {
 // correctly after a command's execution - thus, session.Wait() hangs
 // indefinitely. However, the exit code is sent after the session is closed,
 // which can be forced 1. with stdin.Close() 2. by writing "exit" on stdin.
+//
+// To know if the command execution has succeeded, the client of this API
+// *must* check stdout/stderr.
 func (c *sshConnection) ExecDRACShell(cmd string) (string, error) {
 	session, err := c.client.NewSession()
 	if err != nil {
@@ -176,7 +179,8 @@ func (c *sshConnection) ExecDRACShell(cmd string) (string, error) {
 		return "", err
 	}
 
-	log.Println("Waiting...")
+	// The error returned by Wait() will always be 254, so it does not make
+	// sense to check it here.
 	session.Wait()
 
 	readers := io.MultiReader(stdout, stderr)
