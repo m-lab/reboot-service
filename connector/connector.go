@@ -105,6 +105,7 @@ func NewConnector() Connector {
 
 // Connection is any kind of connection over which some commands can be run.
 type Connection interface {
+	Exec(string) (string, error)
 	Reboot() (string, error)
 	Close() error
 }
@@ -114,9 +115,8 @@ type sshConnection struct {
 	client client
 }
 
-// exec runs a command over the connection. It's meant to be used internally
-// inside wrappers such as Reboot().
-func (c *sshConnection) exec(cmd string) (string, error) {
+// Exec runs a command over the connection.
+func (c *sshConnection) Exec(cmd string) (string, error) {
 	session, err := c.client.NewSession()
 	if err != nil {
 		return "", err
@@ -143,12 +143,12 @@ func (c *sshConnection) Reboot() (string, error) {
 		// automatically trigger a "systemctl reboot" command.
 		// To actually start an SSH session (and thus trigger a reboot) a
 		// command must be executed.
-		output, err = c.exec("")
+		output, err = c.Exec("")
 		if err != nil {
 			return "", err
 		}
 	} else if c.config.ConnType == BMCConnection {
-		output, err = c.exec("racadm serveraction powercycle")
+		output, err = c.Exec("racadm serveraction powercycle")
 		if err != nil {
 			return "", err
 		}
