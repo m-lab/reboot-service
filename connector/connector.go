@@ -179,8 +179,8 @@ func (c *sshConnection) ExecDRACShell(cmd string) (string, error) {
 		return "", err
 	}
 
-	// The error returned by Wait() will always be 254, so it does not make
-	// sense to check it here.
+	// Wait() will always return an error here, even if the main command's
+	// execution has been successful, so we ignore it.
 	session.Wait()
 
 	readers := io.MultiReader(stdout, stderr)
