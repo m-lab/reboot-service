@@ -3,6 +3,7 @@ package connector
 import (
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"golang.org/x/crypto/ssh"
@@ -56,6 +57,26 @@ func (session *mockSession) CombinedOutput(cmd string) ([]byte, error) {
 }
 
 func (session *mockSession) Close() error {
+	return nil
+}
+
+func (session *mockSession) Shell() error {
+	return nil
+}
+
+func (session *mockSession) StdinPipe() (io.WriteCloser, error) {
+	return nil, nil
+}
+
+func (session *mockSession) StdoutPipe() (io.Reader, error) {
+	return nil, nil
+}
+
+func (session *mockSession) StderrPipe() (io.Reader, error) {
+	return nil, nil
+}
+
+func (session *mockSession) Wait() error {
 	return nil
 }
 

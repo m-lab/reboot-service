@@ -33,6 +33,10 @@ func (connector *mockConnector) NewConnection(*connector.ConnectionConfig) (conn
 	}, nil
 }
 
+func (connection *mockConnection) ExecDRACShell(string) (string, error) {
+	return "Not implemented", nil
+}
+
 func (connection *mockConnection) Reboot() (string, error) {
 	if connection.mustFail {
 		return "", errors.New("method Reboot() failed")

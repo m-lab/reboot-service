@@ -32,6 +32,10 @@ func (connector *mockConnector) NewConnection(*connector.ConnectionConfig) (conn
 	return &mockConnection{}, nil
 }
 
+func (connection *mockConnection) ExecDRACShell(string) (string, error) {
+	return "Not implemented", nil
+}
+
 func (connection *mockConnection) Reboot() (string, error) {
 	return "Not implemented", nil
 }

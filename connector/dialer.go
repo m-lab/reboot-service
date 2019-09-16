@@ -1,6 +1,10 @@
 package connector
 
-import "golang.org/x/crypto/ssh"
+import (
+	"io"
+
+	"golang.org/x/crypto/ssh"
+)
 
 // dialer is an interface to allow mocking of ssh.Dial in unit tests.
 type dialer interface {
@@ -16,6 +20,11 @@ type client interface {
 type session interface {
 	CombinedOutput(cmd string) ([]byte, error)
 	Close() error
+	Shell() error
+	StdinPipe() (io.WriteCloser, error)
+	StdoutPipe() (io.Reader, error)
+	StderrPipe() (io.Reader, error)
+	Wait() error
 }
 
 type sshDialer struct{}
