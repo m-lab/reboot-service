@@ -1,8 +1,11 @@
 package connector
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"testing"
 
 	"golang.org/x/crypto/ssh"
@@ -56,6 +59,34 @@ func (session *mockSession) CombinedOutput(cmd string) ([]byte, error) {
 }
 
 func (session *mockSession) Close() error {
+	return nil
+}
+
+func (session *mockSession) Shell() error {
+	return nil
+}
+
+type mockStdin struct {
+	bytes.Buffer
+}
+
+func (stdin *mockStdin) Close() error {
+	return nil
+}
+
+func (session *mockSession) StdinPipe() (io.WriteCloser, error) {
+	return &mockStdin{}, nil
+}
+
+func (session *mockSession) StdoutPipe() (io.Reader, error) {
+	return strings.NewReader("test output"), nil
+}
+
+func (session *mockSession) StderrPipe() (io.Reader, error) {
+	return strings.NewReader("error"), nil
+}
+
+func (session *mockSession) Wait() error {
 	return nil
 }
 
@@ -221,5 +252,31 @@ func Test_sshConnection_Close(t *testing.T) {
 	err = conn.Close()
 	if err == nil {
 		t.Errorf("Close() unexpected error: %v", err)
+	}
+	mc.mustFail = false
+}
+
+func Test_sshConnection_ExecDRACShell(t *testing.T) {
+	connector := &sshConnector{
+		dialer: md,
+	}
+
+	config := &ConnectionConfig{
+		Hostname:       "testhost",
+		Port:           22,
+		Username:       "testuser",
+		Password:       "testpass",
+		PrivateKeyFile: "",
+		ConnType:       BMCConnection,
+	}
+
+	bmcConn, err := connector.NewConnection(config)
+	if err != nil {
+		t.Errorf("NewConnection() - unexpected error: %v", err)
+	}
+
+	_, err = bmcConn.ExecDRACShell("exit")
+	if err != nil {
+		t.Errorf("ExecDRACShell() returned error: %v", err)
 	}
 }

@@ -3,6 +3,7 @@ package connector
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -105,6 +106,7 @@ func NewConnector() Connector {
 
 // Connection is any kind of connection over which some commands can be run.
 type Connection interface {
+	ExecDRACShell(string) (string, error)
 	Reboot() (string, error)
 	Close() error
 }
@@ -129,6 +131,65 @@ func (c *sshConnection) exec(cmd string) (string, error) {
 	}
 
 	return string(output), err
+}
+
+// ExecDRACShell runs a command in shell mode on a DRAC's SSH server.
+//
+// Due to $reasons (a bug?) the server does not seem to send exit codes
+// correctly after a command's execution - thus, session.Wait() hangs
+// indefinitely. However, the exit code is sent after the session is closed,
+// which can be forced 1. with stdin.Close() 2. by writing "exit" on stdin.
+//
+// To know if the command execution has succeeded, the client of this API
+// *must* check stdout/stderr.
+func (c *sshConnection) ExecDRACShell(cmd string) (string, error) {
+	session, err := c.client.NewSession()
+	if err != nil {
+		return "", err
+	}
+	defer session.Close()
+
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		return "", err
+	}
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return "", err
+	}
+
+	stderr, err := session.StderrPipe()
+	if err != nil {
+		return "", err
+	}
+
+	err = session.Shell()
+	if err != nil {
+		return "", err
+	}
+
+	_, err = fmt.Fprintf(stdin, "%s\n", cmd)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = fmt.Fprintf(stdin, "exit\n")
+	if err != nil {
+		return "", err
+	}
+
+	// Wait() will always return an error here, even if the main command's
+	// execution has been successful, so we ignore it.
+	session.Wait()
+
+	readers := io.MultiReader(stdout, stderr)
+	out, err := ioutil.ReadAll(readers)
+	if err != nil {
+		return "", err
+	}
+
+	return string(out), nil
 }
 
 // Reboot reboots the node via this Connection. The method to perform the
