@@ -38,6 +38,11 @@ func (c *Credentials) String() string {
 
 // Provider is a Credentials provider.
 type Provider interface {
+
+	// ListCredentials lists all the existing Credentials on this Provider.
+	ListCredentials(context.Context) ([]*Credentials, error)
+
+	// FindCredentials gets an existing Credentials from this Provider.
 	FindCredentials(context.Context, string) (*Credentials, error)
 
 	// AddCredentials creates a new Credentials entity on this Provider.
@@ -73,6 +78,20 @@ func NewProvider(connector Connector, projectID, namespace string) (Provider, er
 		namespace: namespace,
 		client:    client,
 	}, nil
+}
+
+func (d *datastoreProvider) ListCredentials(ctx context.Context) ([]*Credentials, error) {
+	log.Debugf("Retrieving all credentials from namespace %v", d.namespace)
+
+	query := datastore.NewQuery(kind).Namespace(d.namespace)
+	var creds []*Credentials
+	_, err := d.client.GetAll(ctx, query, &creds)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return creds, nil
 }
 
 func (d *datastoreProvider) FindCredentials(ctx context.Context, host string) (*Credentials, error) {

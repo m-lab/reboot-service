@@ -2,6 +2,7 @@ package credstest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/m-lab/reboot-service/creds"
@@ -28,6 +29,31 @@ func TestFakeProvider_AddCredentials(t *testing.T) {
 	}
 }
 
+func TestFakeProvider_ListCredentials(t *testing.T) {
+	fakeDrac := &creds.Credentials{
+		Hostname: "host",
+		Username: "user",
+		Password: "pass",
+		Model:    "model",
+		Address:  "address",
+	}
+
+	provider := &FakeProvider{
+		creds: map[string]*creds.Credentials{
+			"test": fakeDrac,
+		},
+	}
+
+	// Retrieve previously added Credentials from the FakeProvider's map.
+	creds, err := provider.ListCredentials(context.Background())
+	if err != nil {
+		t.Errorf("ListCredentials() returned an error")
+	}
+	fmt.Println(creds[0])
+	if len(creds) != 1 || *creds[0] != *fakeDrac {
+		t.Errorf("ListCredentials() didn't return the expected Credentials.")
+	}
+}
 func TestFakeProvider_FindCredentials(t *testing.T) {
 	fakeDrac := &creds.Credentials{
 		Hostname: "host",
