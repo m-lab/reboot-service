@@ -20,6 +20,17 @@ func NewProvider() *FakeProvider {
 	}
 }
 
+// ListCredentials returns a slice with all the values in the creds map.
+func (p *FakeProvider) ListCredentials(ctx context.Context) ([]*creds.Credentials, error) {
+	v := make([]*creds.Credentials, 0, len(p.creds))
+
+	for _, value := range p.creds {
+		v = append(v, value)
+	}
+
+	return v, nil
+}
+
 // FindCredentials returns a Credentials from the creds map or an error.
 func (p *FakeProvider) FindCredentials(ctx context.Context,
 	host string) (*creds.Credentials, error) {

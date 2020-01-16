@@ -89,6 +89,48 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
+func TestListCredentials(t *testing.T) {
+	// Create a mockClient returning fake Credentials.
+	fakeDrac := &Credentials{
+		Hostname: "host",
+		Username: "user",
+		Password: "pass",
+		Model:    "model",
+		Address:  "address",
+	}
+	mc := &mockClient{
+		Creds: []*Credentials{
+			fakeDrac,
+		},
+	}
+	provider := &datastoreProvider{
+		namespace: "ns",
+		projectID: "projectID",
+		client:    mc,
+	}
+
+	// ListCredentials() should return the known Credentials.
+	creds, err := provider.ListCredentials(context.Background())
+	if err != nil {
+		t.Errorf("ListCredentials() unexpected error")
+	}
+	if len(creds) != 1 {
+		t.Errorf("ListCredentials() returned a slice of the wrong size.")
+	}
+
+	if *creds[0] != *fakeDrac {
+		t.Errorf("ListCredentials() didn't return the expected Credentials.")
+	}
+
+	// ListCredentials should fail if client.GetAll fails.
+	mc.mustFail = true
+	creds, err = provider.ListCredentials(context.Background())
+	if err == nil {
+		t.Errorf("ListCredentials() didn't return an error.")
+	}
+	mc.mustFail = false
+
+}
 func TestFindCredentials(t *testing.T) {
 	// Create a mockClient returning fake Credentials.
 	fakeDrac := &Credentials{
