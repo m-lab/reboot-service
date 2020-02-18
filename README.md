@@ -51,8 +51,8 @@ This endpoint returns a valid Prometheus metric representing the status of the B
 
 Possible statuses are:
 
-Status         | Description
-- | -
+Status            | Description
+------------------| ----------------
 ok | Connection to this BMC was successful
 credentials_not_found | Credentials to access this BMC are not available in the Credentials store
 connection_failed | Connection to this BMC failed
