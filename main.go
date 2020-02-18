@@ -7,6 +7,10 @@ import (
 	"crypto/tls"
 	"flag"
 	"net/http"
+	"time"
+
+	cache "github.com/victorspringer/http-cache"
+	"github.com/victorspringer/http-cache/adapter/memory"
 
 	"github.com/goji/httpauth"
 	"golang.org/x/crypto/acme/autocert"
@@ -43,6 +47,11 @@ var (
 	tlsCertsDir = flag.String("tls.certs-dir", defaultCertsDir,
 		"Folder where to cache TLS certificates")
 
+	e2eCacheCapacity = flag.Int("e2e.cache-capacity", defaultCacheCapacity,
+		"Maximum cached responses for the e2e endpoint")
+	e2eCacheTTL = flag.Int("e2e.cache-ttl", defaultCacheTTL,
+		"TTL of cached responses for the e2e endpoint, in minutes")
+
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
 )
@@ -56,6 +65,12 @@ const (
 	defaultBMCPort    = 806
 	defaultRebootUser = "reboot-api"
 	defaultCertsDir   = "/var/tls/"
+
+	// The default cache capacity has been chosen based on the current amount
+	// of BMCs on the platform, plus some significant headroom for future
+	// expansion.
+	defaultCacheCapacity = 2000
+	defaultCacheTTL      = 60
 )
 
 func init() {
@@ -102,6 +117,22 @@ func main() {
 	)
 	rebootHandler = reboot.NewHandler(rebootConfig, credentials, connector)
 	e2eHandler = e2e.NewHandler(int32(*bmcPort), credentials, connector)
+
+	// Create an in-memory cache to avoid querying the BMCs tool often in e2e
+	// tests.
+	memcache, err := memory.NewAdapter(
+		memory.AdapterWithAlgorithm(memory.MRU),
+		memory.AdapterWithCapacity(*e2eCacheCapacity),
+	)
+	rtx.Must(err, "Cannot initialize in-memory cache.")
+
+	cacheClient, err := cache.NewClient(
+		cache.ClientWithAdapter(memcache),
+		cache.ClientWithTTL(time.Duration(*e2eCacheTTL)*time.Minute),
+	)
+	rtx.Must(err, "Cannot initialize in-memory cache client.")
+
+	e2eHandler = cacheClient.Middleware(e2eHandler)
 
 	// Initialize HTTP server.
 	// TODO(roberto): add promhttp instruments for handlers.
