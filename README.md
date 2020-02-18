@@ -37,6 +37,14 @@ curl -X POST https://<reboot-api-url>/v1/reboot?host=mlab1.lga0t&method=host
 
 The `/v1/e2e` endpoint allows to run an e2e test on a specific BMC.
 
+Results are cached by default. You can configure the cache capacity and TTL with `-e2e.cache-capacity` and `-e2e.cache-ttl`.
+
+### GET /v1/e2e
+
+Parameter         | Description
+------------------| ----------------
+`target`          | hostname of the BMC to check
+
 This endpoint returns a valid Prometheus metric representing the status of the BMC:
 
 ```reboot_e2e_result{status="<status>",target="<hostname>"} 1```
@@ -48,14 +56,6 @@ Status         | Description
 ok | Connection to this BMC was successful
 credentials_not_found | Credentials to access this BMC are not available in the Credentials store
 connection_failed | Connection to this BMC failed
-
-Results are cached by default. You can configure the cache capacity and TTL with `-e2e.cache-capacity` and `-e2e.cache-ttl`.
-
-### GET /v1/e2e
-
-Parameter         | Description
-------------------| ----------------
-`target`          | hostname of the BMC to check
 
 
 #### Examples
