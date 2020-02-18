@@ -10,7 +10,7 @@ CoreOS hosts is granted through a private SSH key.
 
 ## Rebooting nodes with the Reboot API
 
-The API provides a single endpoint, `/v1/reboot`, which allows to reboot a node with two different methods.
+The API provides a reboot endpoint, `/v1/reboot`, which allows to reboot a node with two different methods.
 
 ### POST /v1/reboot
 
@@ -31,6 +31,44 @@ curl -X POST https://<reboot-api-url>/v1/reboot?host=mlab1.lga0t
 
 ```bash
 curl -X POST https://<reboot-api-url>/v1/reboot?host=mlab1.lga0t&method=host
+```
+
+## End-to-end testing 
+
+The `/v1/e2e` endpoint allows to run an e2e test on a specific BMC.
+
+Results are cached by default. You can configure the cache capacity and TTL with `-e2e.cache-capacity` and `-e2e.cache-ttl`.
+
+### GET /v1/e2e
+
+Parameter         | Description
+------------------| ----------------
+`target`          | hostname of the BMC to check
+
+This endpoint returns a valid Prometheus metric representing the status of the BMC:
+
+```reboot_e2e_result{status="<status>",target="<hostname>"} 1```
+
+Possible statuses are:
+
+Status            | Description
+------------------| ----------------
+ok | Connection to this BMC was successful
+credentials_not_found | Credentials to access this BMC are not available in the Credentials store
+connection_failed | Connection to this BMC failed
+
+
+#### Examples
+
+```bash
+curl https://<reboot-api-url>/v1/e2e?target=mlab1d.lga0t.measurement-lab.org
+```
+
+*Output*:
+```
+# HELP reboot_e2e_result E2E test result for this target
+# TYPE reboot_e2e_result gauge
+reboot_e2e_result{status="ok",target="mlab1d.lga0t.measurement-lab.org"} 1
 ```
 
 ## Running the Reboot API
