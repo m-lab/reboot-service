@@ -48,9 +48,9 @@ var (
 		"Folder where to cache TLS certificates")
 
 	e2eCacheCapacity = flag.Int("e2e.cache-capacity", defaultCacheCapacity,
-		"Maximum cached responses for the e2e endpoint")
-	e2eCacheTTL = flag.Int("e2e.cache-ttl", defaultCacheTTL,
-		"TTL of cached responses for the e2e endpoint, in minutes")
+		"Maximum # of cached responses for the e2e endpoint")
+	e2eCacheTTL = flag.Duration("e2e.cache-ttl", defaultCacheTTL,
+		"TTL of cached responses for the e2e endpoint")
 
 	// Context for the whole program.
 	ctx, cancel = context.WithCancel(context.Background())
@@ -70,7 +70,7 @@ const (
 	// of BMCs on the platform, plus some significant headroom for future
 	// expansion.
 	defaultCacheCapacity = 2000
-	defaultCacheTTL      = 60
+	defaultCacheTTL      = 60 * time.Minute
 )
 
 func init() {
@@ -128,7 +128,7 @@ func main() {
 
 	cacheClient, err := cache.NewClient(
 		cache.ClientWithAdapter(memcache),
-		cache.ClientWithTTL(time.Duration(*e2eCacheTTL)*time.Minute),
+		cache.ClientWithTTL(*e2eCacheTTL),
 	)
 	rtx.Must(err, "Cannot initialize in-memory cache client.")
 
