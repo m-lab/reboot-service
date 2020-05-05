@@ -15,7 +15,6 @@ import (
 	"github.com/m-lab/reboot-service/creds"
 )
 
-var bmcHostRegex = regexp.MustCompile("(mlab[1-4]d)\\.([a-zA-Z]{3}[0-9t]{2}).*")
 var bmcV1Regex = regexp.MustCompile(`^(mlab[1-4]d)\.([a-z]{3}[0-9tc]{2}).*`)
 var bmcV2Regex = regexp.MustCompile(`^(mlab[1-4]d)-([a-z]{3}[0-9tc]{2})\.(.*?)\.(measurement-lab.org)$`)
 
