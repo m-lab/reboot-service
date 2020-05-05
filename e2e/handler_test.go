@@ -134,6 +134,11 @@ func Test_parseBMCHostname(t *testing.T) {
 			want:     "mlab1d.abc0t.measurement-lab.org",
 		},
 		{
+			name:     "ok-v2-hostname",
+			hostname: "mlab1d-abc0t.test.measurement-lab.org",
+			want:     "mlab1d-abc0t.test.measurement-lab.org",
+		},
+		{
 			name:     "failure-wrong-node-name",
 			hostname: "mlab1.abc0t",
 			wantErr:  true,
