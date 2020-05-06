@@ -31,10 +31,10 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		connectorMustFail bool
 	}{
 		{
-			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.abc0t.measurement-lab.org", nil),
+			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab1d-abc0t.mlab-sandbox.measurement-lab.org", nil),
 			status: http.StatusOK,
 			body: expMetadata + `reboot_e2e_result{status="` + statusOK +
-				`",target="mlab1d.abc0t.measurement-lab.org"} 1
+				`",target="mlab1d-abc0t.mlab-sandbox.measurement-lab.org"} 1
 `,
 		},
 		{
@@ -45,11 +45,11 @@ func TestHandler_ServeHTTP(t *testing.T) {
 `,
 		},
 		{
-			req:               httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.abc0t.measurement-lab.org", nil),
+			req:               httptest.NewRequest("GET", "/v1/e2e?target=mlab1d-abc0t.mlab-sandbox.measurement-lab.org", nil),
 			status:            http.StatusOK,
 			connectorMustFail: true,
 			body: expMetadata + `reboot_e2e_result{status="` + statusConnectionFailed +
-				`",target="mlab1d.abc0t.measurement-lab.org"} 0
+				`",target="mlab1d-abc0t.mlab-sandbox.measurement-lab.org"} 0
 `,
 		},
 		{
@@ -71,8 +71,8 @@ func TestHandler_ServeHTTP(t *testing.T) {
 	// Create a FakeProvider and populate it with fake Credentials.
 	provider := credstest.NewProvider()
 	provider.AddCredentials(context.Background(),
-		"mlab1d.abc0t.measurement-lab.org", &creds.Credentials{
-			Hostname: "mlab1.abc0t.measurement-lab.org",
+		"mlab1d-abc0t.mlab-sandbox.measurement-lab.org", &creds.Credentials{
+			Hostname: "mlab1d-abc0t.mlab-sandbox.measurement-lab.org",
 			Username: "testuser",
 			Password: "testpass",
 			Model:    "drac",
