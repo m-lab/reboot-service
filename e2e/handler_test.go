@@ -31,21 +31,21 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		connectorMustFail bool
 	}{
 		{
-			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.abc0t", nil),
+			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.abc0t.measurement-lab.org", nil),
 			status: http.StatusOK,
 			body: expMetadata + `reboot_e2e_result{status="` + statusOK +
 				`",target="mlab1d.abc0t.measurement-lab.org"} 1
 `,
 		},
 		{
-			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab2d.abc0t", nil),
+			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab2d.abc0t.measurement-lab.org", nil),
 			status: http.StatusOK,
 			body: expMetadata + `reboot_e2e_result{status="` + statusCredsNotFound +
 				`",target="mlab2d.abc0t.measurement-lab.org"} 0
 `,
 		},
 		{
-			req:               httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.abc0t", nil),
+			req:               httptest.NewRequest("GET", "/v1/e2e?target=mlab1d.abc0t.measurement-lab.org", nil),
 			status:            http.StatusOK,
 			connectorMustFail: true,
 			body: expMetadata + `reboot_e2e_result{status="` + statusConnectionFailed +
@@ -53,7 +53,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 `,
 		},
 		{
-			req:    httptest.NewRequest("POST", "/v1/e2e?target=mlab1d.abc0t", nil),
+			req:    httptest.NewRequest("POST", "/v1/e2e?target=mlab1d.abc0t.measurement-lab.org", nil),
 			status: http.StatusMethodNotAllowed,
 		},
 		{
@@ -72,7 +72,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 	provider := credstest.NewProvider()
 	provider.AddCredentials(context.Background(),
 		"mlab1d.abc0t.measurement-lab.org", &creds.Credentials{
-			Hostname: "mlab1.abc0t",
+			Hostname: "mlab1.abc0t.measurement-lab.org",
 			Username: "testuser",
 			Password: "testpass",
 			Model:    "drac",
@@ -114,51 +114,4 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		}
 	}
 
-}
-
-func Test_parseBMCHostname(t *testing.T) {
-	tests := []struct {
-		name     string
-		hostname string
-		want     string
-		wantErr  bool
-	}{
-		{
-			name:     "ok-full-hostname",
-			hostname: "mlab1d.abc0t.measurement-lab.org",
-			want:     "mlab1d.abc0t.measurement-lab.org",
-		},
-		{
-			name:     "ok-shorthand-hostname",
-			hostname: "mlab1d.abc0t",
-			want:     "mlab1d.abc0t.measurement-lab.org",
-		},
-		{
-			name:     "ok-v2-hostname",
-			hostname: "mlab1d-abc0t.test.measurement-lab.org",
-			want:     "mlab1d-abc0t.test.measurement-lab.org",
-		},
-		{
-			name:     "failure-wrong-node-name",
-			hostname: "mlab1.abc0t",
-			wantErr:  true,
-		},
-		{
-			name:     "failure-wrong-site-name",
-			hostname: "mlab1d.abc0",
-			wantErr:  true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseBMCHostname(tt.hostname)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseBMCHostname() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("parseBMCHostname() = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }
