@@ -62,12 +62,13 @@ func TestServeHTTP(t *testing.T) {
 		connectionMustFail bool
 	}{
 		{
-			req:    httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
+			req: httptest.NewRequest("POST",
+				"/v1/reboot?host=mlab1d-abc0t.mlab-sandbox.measurement-lab.org", nil),
 			status: http.StatusOK,
 			body:   "Server power operation successful",
 		},
 		{
-			req:    httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t&method=host", nil),
+			req:    httptest.NewRequest("POST", "/v1/reboot?host=mlab2d.abc0t.measurement-lab.org&method=host", nil),
 			status: http.StatusOK,
 		},
 		{
@@ -81,30 +82,35 @@ func TestServeHTTP(t *testing.T) {
 			body:   "",
 		},
 		{
-			req:    httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga1t", nil),
+			req: httptest.NewRequest("POST",
+				"/v1/reboot?host=mlab1d-abc1t.mlab-sandbox.measurement-lab.org", nil),
 			status: http.StatusInternalServerError,
 			body:   "",
 		},
 		{
-			req:               httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
+			req: httptest.NewRequest("POST",
+				"/v1/reboot?host=mlab1d-abc0t.mlab-sandbox.measurement-lab.org", nil),
 			connectorMustFail: true,
 			status:            http.StatusInternalServerError,
 			body:              "",
 		},
 		{
-			req:                httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t", nil),
+			req: httptest.NewRequest("POST",
+				"/v1/reboot?host=mlab1d-abc0t.mlab-sandbox.measurement-lab.org", nil),
 			connectionMustFail: true,
 			status:             http.StatusInternalServerError,
 			body:               "",
 		},
 		{
-			req:               httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t&method=host", nil),
+			req: httptest.NewRequest("POST",
+				"/v1/reboot?host=mlab1d-abc0t.mlab-sandbox.measurement-lab.org&method=host", nil),
 			connectorMustFail: true,
 			status:            http.StatusInternalServerError,
 			body:              "",
 		},
 		{
-			req:                httptest.NewRequest("POST", "/v1/reboot?host=mlab1.lga0t&method=host", nil),
+			req: httptest.NewRequest("POST",
+				"/v1/reboot?host=mlab1d-abc0t.mlab-sandbox.measurement-lab.org&method=host", nil),
 			connectionMustFail: true,
 			status:             http.StatusInternalServerError,
 			body:               "",
@@ -121,8 +127,8 @@ func TestServeHTTP(t *testing.T) {
 	// Create a FakeProvider and populate it with fake Credentials.
 	provider := credstest.NewProvider()
 	provider.AddCredentials(context.Background(),
-		"mlab1d.lga0t.measurement-lab.org", &creds.Credentials{
-			Hostname: "mlab1.lga0t",
+		"mlab1d-abc0t.mlab-sandbox.measurement-lab.org", &creds.Credentials{
+			Hostname: "mlab1d.abc0t",
 			Username: "testuser",
 			Password: "testpass",
 			Model:    "drac",

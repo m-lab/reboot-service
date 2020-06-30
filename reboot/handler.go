@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/apex/log"
+	"github.com/m-lab/go/host"
 	"github.com/m-lab/reboot-service/connector"
 	"github.com/m-lab/reboot-service/creds"
 	"github.com/prometheus/client_golang/prometheus"
@@ -77,12 +77,11 @@ type Handler struct {
 	connector     connector.Connector
 }
 
-func (h *Handler) rebootHost(ctx context.Context, node string, site string) (string, error) {
-	host := makeHostname(node, site)
+func (h *Handler) rebootHost(ctx context.Context, node host.Name) (string, error) {
 
 	// Connect to the host
 	connectionConfig := &connector.ConnectionConfig{
-		Hostname:       host,
+		Hostname:       node.String(),
 		Username:       h.config.RebootUser,
 		Port:           h.config.SSHPort,
 		PrivateKeyFile: h.config.PrivateKeyPath,
@@ -94,7 +93,7 @@ func (h *Handler) rebootHost(ctx context.Context, node string, site string) (str
 		log.WithError(err).
 			Errorf("Cannot connect to host: %s:%d with username %s",
 				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
-		metricHostReboots.WithLabelValues(site, node, "error-connect").Inc()
+		metricHostReboots.WithLabelValues(node.Site, node.Machine, "error-connect").Inc()
 		return "", err
 	}
 	defer conn.Close()
@@ -102,28 +101,19 @@ func (h *Handler) rebootHost(ctx context.Context, node string, site string) (str
 	_, err = conn.Reboot()
 	if err != nil {
 		log.WithError(err).Errorf("Cannot issue reboot command (type: %v)", connectionConfig.ConnType)
-		metricHostReboots.WithLabelValues(site, node, "error-reboot").Inc()
+		metricHostReboots.WithLabelValues(node.Site, node.Machine, "error-reboot").Inc()
 		return "", err
 	}
 
-	metricHostReboots.WithLabelValues(site, node, "ok").Inc()
+	metricHostReboots.WithLabelValues(node.Site, node.Machine, "ok").Inc()
 	return "System reboot successful", nil
 }
 
-func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (string, error) {
-	// There are different ways a BMC hostname can be provided:
-	// - mlab1.lga0t
-	// - mlab1d.lga0t
-	// - mlab1.lga0t.measurement-lab.org
-	// - mlab1d.lga0t.measurement-lab.org
-	// To make sure this is handled in a flexible way, the site and host parts
-	// are provided separately and re-assembled here.
-	host := makeBMCHostname(node, site)
-
+func (h *Handler) rebootBMC(ctx context.Context, node host.Name) (string, error) {
 	// Retrieve credentials from the credentials provider.
-	creds, err := h.credsProvider.FindCredentials(ctx, host)
+	creds, err := h.credsProvider.FindCredentials(ctx, node.String())
 	if err != nil {
-		log.WithError(err).Errorf("Cannot retrieve credentials for host: %v", host)
+		log.WithError(err).Errorf("Cannot retrieve credentials for host: %v", node.String())
 		return "", err
 	}
 
@@ -143,7 +133,7 @@ func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (stri
 		log.WithError(err).
 			Errorf("Cannot connect to DRAC: %s:%d with username %s",
 				connectionConfig.Hostname, connectionConfig.Port, connectionConfig.Username)
-		metricBMCReboots.WithLabelValues(site, node, "error-connect").Inc()
+		metricBMCReboots.WithLabelValues(node.Site, node.Machine, "error-connect").Inc()
 		return "", err
 	}
 	defer conn.Close()
@@ -152,11 +142,11 @@ func (h *Handler) rebootBMC(ctx context.Context, node string, site string) (stri
 	output, err := conn.Reboot()
 	if err != nil {
 		log.WithError(err).Errorf("Cannot issue reboot command")
-		metricBMCReboots.WithLabelValues(site, node, "error-reboot").Inc()
+		metricBMCReboots.WithLabelValues(node.Site, node.Machine, "error-reboot").Inc()
 		return "", err
 	}
 
-	metricBMCReboots.WithLabelValues(site, node, "ok").Inc()
+	metricBMCReboots.WithLabelValues(node.Site, node.Machine, "ok").Inc()
 	metricBMCRebootTimeHist.Observe(time.Since(start).Seconds())
 	return output, nil
 }
@@ -168,8 +158,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	host := r.URL.Query().Get("host")
-	if len(host) == 0 {
+	target := r.URL.Query().Get("host")
+	if len(target) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("URL parameter 'host' is missing"))
 		log.Info("URL parameter 'host' is missing")
@@ -178,10 +168,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Split hostname into site/node. If site and node cannot be extracted,
 	// we are reasonably sure this is not a valid M-Lab node's BMC.
-	node, site, err := parseNodeSite(host)
+	node, err := host.Parse(target)
 	if err != nil {
 		errStr := fmt.Sprintf(
-			"The specified hostname is not a valid M-Lab node: %s", host)
+			"The specified hostname is not a valid M-Lab node: %s", target)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(errStr))
 		log.Errorf(errStr)
@@ -191,9 +181,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	method := r.URL.Query().Get("method")
 	var output string
 	if method == "host" {
-		output, err = h.rebootHost(context.Background(), node, site)
+		output, err = h.rebootHost(context.Background(), node)
 	} else { // default method is DRAC
-		output, err = h.rebootBMC(context.Background(), node, site)
+		output, err = h.rebootBMC(context.Background(), node)
 	}
 
 	if err != nil {
@@ -203,32 +193,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.WithField("output", output).Infof("%v rebooted successfully.", host)
+	log.WithField("output", output).Infof("%v rebooted successfully.",
+		node.String())
 	w.Write([]byte(output))
-}
-
-// parseNodeSite extracts node and site from a full hostname.
-func parseNodeSite(hostname string) (string, string, error) {
-	regex := regexp.MustCompile("(mlab[1-4]d?)\\.([a-zA-Z]{3}[0-9t]{2}).*")
-	result := regex.FindStringSubmatch(hostname)
-	if len(result) != 3 {
-		return "", "",
-			fmt.Errorf("The specified hostname is not a valid M-Lab node: %s", hostname)
-	}
-
-	return result[1], result[2], nil
-}
-
-// makeBMCHostname returns a full BMC hostname made from the specified node
-// and site (node + 'd' + site + "measurement-lab.org").
-func makeBMCHostname(node string, site string) string {
-	if node[len(node)-1] != 'd' {
-		node = node + "d"
-	}
-
-	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
-}
-
-func makeHostname(node string, site string) string {
-	return fmt.Sprintf("%s.%s.measurement-lab.org", node, site)
 }
