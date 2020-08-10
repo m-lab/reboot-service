@@ -112,8 +112,8 @@ func (h *Handler) rebootHost(ctx context.Context, node host.Name) (string, error
 
 func (h *Handler) rebootBMC(ctx context.Context, node host.Name) (string, error) {
 	// BMC machine names are always suffixed with 'd'.
-	if !strings.HasSuffix(node.Site, "d") {
-		node.Site = node.Site + "d"
+	if !strings.HasSuffix(node.Machine, "d") {
+		node.Machine = node.Machine + "d"
 	}
 
 	// Retrieve credentials from the credentials provider.
