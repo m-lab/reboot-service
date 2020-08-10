@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/apex/log"
@@ -110,6 +111,11 @@ func (h *Handler) rebootHost(ctx context.Context, node host.Name) (string, error
 }
 
 func (h *Handler) rebootBMC(ctx context.Context, node host.Name) (string, error) {
+	// BMC hostnames are always suffixed with 'd'.
+	if !strings.HasSuffix(node.Site, "d") {
+		node.Site = node.Site + "d"
+	}
+
 	// Retrieve credentials from the credentials provider.
 	creds, err := h.credsProvider.FindCredentials(ctx, node.String())
 	if err != nil {
