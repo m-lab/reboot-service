@@ -62,7 +62,7 @@ const (
 	defaultProjID     = "mlab-sandbox"
 	defaultNamespace  = "reboot-api"
 	defaultSSHPort    = 22
-	defaultBMCPort    = 806
+	defaultBMCPort    = 22
 	defaultRebootUser = "reboot-api"
 	defaultCertsDir   = "/var/tls/"
 
