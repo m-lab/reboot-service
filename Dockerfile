@@ -1,4 +1,4 @@
-FROM golang:1.12 as build
+FROM golang:1.14.3 as build
 ENV CGO_ENABLED 0
 ADD . /go/src/github.com/m-lab/reboot-service
 WORKDIR /go/src/github.com/m-lab/reboot-service

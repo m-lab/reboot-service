@@ -75,6 +75,21 @@ func (s *sshConnector) NewConnection(config *ConnectionConfig) (Connection, erro
 	passwordAuth := ssh.Password(config.Password)
 	authMethods = append(authMethods, passwordAuth)
 
+	// This is needed to support the most recent Dell iDRAC modules, which use
+	// "keyboard-interactive" authentication rather than just "password".
+	// The function replies with the password regardless of what the challenge
+	// string is.
+	keyboardInteractiveAuth := ssh.KeyboardInteractive(func(user,
+		instruction string, questions []string,
+		echos []bool) (answers []string, err error) {
+		answers = make([]string, len(questions))
+		for n := range questions {
+			answers[n] = config.Password
+		}
+		return answers, nil
+	})
+	authMethods = append(authMethods, keyboardInteractiveAuth)
+
 	// TODO: find out how to enable host key verification for M-Lab hosts.
 	clientConfig := &ssh.ClientConfig{
 		User:            config.Username,
