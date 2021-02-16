@@ -74,12 +74,12 @@ func Test_e2eTestCollector_Collect(t *testing.T) {
 	collector := newE2ETestCollector("mlab1d.abc0t.measurement-lab.org", config)
 
 	// Compare actual vs expected output in the "ok" case.
-	expMetadata := `# HELP reboot_e2e_result E2E test result for this target
-# TYPE reboot_e2e_result gauge
+	expMetadata := `# HELP reboot_e2e_success E2E test result for this target
+# TYPE reboot_e2e_success gauge
 
 `
 	expMetric := `
-reboot_e2e_result{reason="` + reasonSuccess + `",status="` + statusOK + `",target="mlab1d.abc0t.measurement-lab.org"} 1
+reboot_e2e_success{reason="` + reasonSuccess + `",target="mlab1d.abc0t.measurement-lab.org"} 1
 `
 	err := testutil.CollectAndCompare(collector, strings.NewReader(
 		expMetadata+expMetric))
@@ -89,7 +89,7 @@ reboot_e2e_result{reason="` + reasonSuccess + `",status="` + statusOK + `",targe
 
 	// Compare actual vs expected output in the "connection_failed" case.
 	expMetric = `
-reboot_e2e_result{reason="` + reasonConnectionFailed + `",status="` + statusOK + `",target="mlab1d.abc0t.measurement-lab.org"} 0
+reboot_e2e_success{reason="` + reasonConnectionFailed + `",target="mlab1d.abc0t.measurement-lab.org"} 0
 `
 	connector.mustFail = true
 	collector = newE2ETestCollector("mlab1d.abc0t.measurement-lab.org", config)
@@ -101,7 +101,7 @@ reboot_e2e_result{reason="` + reasonConnectionFailed + `",status="` + statusOK +
 
 	// Compare actual vs expected output in the "credentials_not_found" case.
 	expMetric = `
-reboot_e2e_result{reason="` + reasonCredsNotFound + `",status="` + statusOK + `",target="mlab2d.abc0t.measurement-lab.org"} 0
+reboot_e2e_success{reason="` + reasonCredsNotFound + `",target="mlab2d.abc0t.measurement-lab.org"} 0
 `
 	collector = newE2ETestCollector("mlab2d.abc0t.measurement-lab.org", config)
 	err = testutil.CollectAndCompare(collector, strings.NewReader(
