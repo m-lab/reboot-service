@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	statusOK               = "ok"
-	statusCredsNotFound    = "credentials_not_found"
-	statusConnectionFailed = "connection_failed"
+	reasonSuccess          = "success"
+	reasonCredsNotFound    = "credentials_not_found"
+	reasonConnectionFailed = "connection_failed"
 
 	// Timeout for the e2e test must be shorter than Prometheus' timeout.
 	connectionTimeout = 45 * time.Second
@@ -36,8 +36,8 @@ func newE2ETestCollector(target string, config *collectorConfig) *e2eTestCollect
 	return &e2eTestCollector{
 		target: target,
 		config: config,
-		resultMetric: prometheus.NewDesc("reboot_e2e_result",
-			"E2E test result for this target", []string{"target", "status"},
+		resultMetric: prometheus.NewDesc("reboot_e2e_success",
+			"E2E test result for this target", []string{"target", "reason"},
 			nil),
 	}
 }
@@ -52,7 +52,7 @@ func (c *e2eTestCollector) Collect(ch chan<- prometheus.Metric) {
 	if err != nil {
 		log.Errorf("Error while getting credentials for %s: %v", c.target, err)
 		ch <- prometheus.MustNewConstMetric(c.resultMetric,
-			prometheus.GaugeValue, 0, c.target, statusCredsNotFound)
+			prometheus.GaugeValue, 0, c.target, reasonCredsNotFound)
 		return
 	}
 
@@ -70,7 +70,7 @@ func (c *e2eTestCollector) Collect(ch chan<- prometheus.Metric) {
 		// TODO: here we should be able to distinguish different errors.
 		log.Errorf("Error while creating connection to %s: %v", c.target, err)
 		ch <- prometheus.MustNewConstMetric(c.resultMetric,
-			prometheus.GaugeValue, 0, c.target, statusConnectionFailed)
+			prometheus.GaugeValue, 0, c.target, reasonConnectionFailed)
 		return
 	}
 
@@ -78,7 +78,7 @@ func (c *e2eTestCollector) Collect(ch chan<- prometheus.Metric) {
 	conn.Close()
 
 	ch <- prometheus.MustNewConstMetric(c.resultMetric, prometheus.GaugeValue,
-		1, c.target, statusOK)
+		1, c.target, reasonSuccess)
 }
 
 func (c *e2eTestCollector) getCredentials(hostname string) (*creds.Credentials, error) {

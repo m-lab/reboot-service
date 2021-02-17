@@ -21,8 +21,8 @@ func TestNewHandler(t *testing.T) {
 }
 
 func TestHandler_ServeHTTP(t *testing.T) {
-	expMetadata := `# HELP reboot_e2e_result E2E test result for this target
-# TYPE reboot_e2e_result gauge
+	expMetadata := `# HELP reboot_e2e_success E2E test result for this target
+# TYPE reboot_e2e_success gauge
 `
 	tests := []struct {
 		req               *http.Request
@@ -33,14 +33,14 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		{
 			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab1d-abc0t.mlab-sandbox.measurement-lab.org", nil),
 			status: http.StatusOK,
-			body: expMetadata + `reboot_e2e_result{status="` + statusOK +
+			body: expMetadata + `reboot_e2e_success{reason="` + reasonSuccess +
 				`",target="mlab1d-abc0t.mlab-sandbox.measurement-lab.org"} 1
 `,
 		},
 		{
 			req:    httptest.NewRequest("GET", "/v1/e2e?target=mlab2d.abc0t.measurement-lab.org", nil),
 			status: http.StatusOK,
-			body: expMetadata + `reboot_e2e_result{status="` + statusCredsNotFound +
+			body: expMetadata + `reboot_e2e_success{reason="` + reasonCredsNotFound +
 				`",target="mlab2d.abc0t.measurement-lab.org"} 0
 `,
 		},
@@ -48,7 +48,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			req:               httptest.NewRequest("GET", "/v1/e2e?target=mlab1d-abc0t.mlab-sandbox.measurement-lab.org", nil),
 			status:            http.StatusOK,
 			connectorMustFail: true,
-			body: expMetadata + `reboot_e2e_result{status="` + statusConnectionFailed +
+			body: expMetadata + `reboot_e2e_success{reason="` + reasonConnectionFailed +
 				`",target="mlab1d-abc0t.mlab-sandbox.measurement-lab.org"} 0
 `,
 		},
@@ -109,7 +109,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				t.Errorf("ServeHTTP() - cannot read response: %v", err)
 			}
 			if string(body) != test.body {
-				t.Errorf("ServeHTTP() - unexpected response: %s", string(body))
+				t.Errorf("ServeHTTP() - expected response:\n%s\ngot:\n%s\n", string(body), test.body)
 			}
 		}
 	}
